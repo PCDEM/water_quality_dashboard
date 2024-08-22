@@ -11,13 +11,6 @@ runtime: shiny
 css: style.css
 ---
 
-```{r, include=FALSE}
-#TODO List:
-
-#1. Change chla to arithmetic mean for E's
-#2. Add table of averages to the summary tab
-```
-
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
