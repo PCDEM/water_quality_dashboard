@@ -1,0 +1,1464 @@
+---
+title: "PINELLAS COUNTY WATER QUALITY DASHBOARD"
+output:
+  flexdashboard::flex_dashboard:
+    logo: www/logo.png
+    social: menu
+    source_code: https://github.com/PCDEM
+    includes:
+      in_header: google-analytics.html
+runtime: shiny
+css: style.css
+---
+
+```{r, include=FALSE}
+#TODO List:
+
+#1. Change chla to arithmetic mean for E's
+#2. Add table of averages to the summary tab
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+# Use %>% with calling package
+box::use(
+  dplyr[`%>%`]
+)
+
+# Set na.rm = TRUE for mean
+mean_n <- purrr::partial(mean, na.rm = TRUE)
+
+# Get functions
+source('R/funcs.R')
+```
+
+```{r water quality, include=FALSE}
+
+#'*---------------------------TIDY DATA---------------------------*
+
+# Import water quality data:
+wqIn <- readxl::read_excel("Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx", guess_max = 50000)
+
+# Import FDEP WBID water quality thresholds (some of the WBID names may not exactly
+# match FDEP WBID names due to Pinellas County monitoring program specifics. For 
+# example, Lake Seminole is FDEP WBID 1618 but is split into 1618_N and 1618_S
+# since the north and south lobes of the lake are sampled separately:
+wCrit <- readxl::read_excel('Data/WBID_criteria.xlsx',sheet='Criteria')
+
+# Filter the data add a TN column and remove sites in St. Pete (not sampled anymore):
+wq <- wqIn |> 
+  dplyr::filter(Level == 'Surface') |>
+  dplyr::mutate(TN = TKN + NOX) |>
+  tidyr::drop_na(WBID)
+
+# Calculate mean water quality data in each basin:
+wqM <- wq |> 
+  dplyr::group_by(WBID, Date, Segment,Type) |>
+  dplyr::summarise(
+            DO = mean_n(`DO%`),
+            chl_a = mean_n(`Chl-a`),
+            TN = mean_n(TN),
+            TP = mean_n(TP),
+            TSS = mean_n(TSS),
+            Turbidity = mean_n(Turbidity),
+            Secchi = mean_n(Secchi),
+            Temp = mean_n(Temp_Water),
+            Salinity = mean_n(Salinity),
+            Ecoli = mean_n(E_coli),
+            Entero = mean_n(Enterococci)
+            ) |>
+  dplyr::ungroup()
+
+
+# Read in PC WBID shapefile:
+wqShp <- sf::st_read('GIS/Waterbody_IDs_(WBIDs).shp') |>
+  dplyr::select(WBID, ID = WATERBODY_) |>
+  sf::st_transform("+proj=longlat +ellps=WGS84 +datum=WGS84") |>
+  dplyr::mutate(Type = wqM$Type[match(WBID,wqM$WBID)],
+         Type = ifelse(is.na(Type), 'NOT SAMPLED', Type),
+         Status = ifelse(WBID %in% c('1558C','1558B','1709D','1709F','1716A','1696',
+                                     '1603B','1700','1683','1530','1624A','1556A'), 'Inactive', 
+                         ifelse(Type == 'NOT SAMPLED','Not Sampled','Active')),
+         color = ifelse(Type == 'COASTAL' & Status == 'Active', '#00244c',
+                  ifelse(Type == 'COASTAL' & Status == 'Inactive', '#6A5ACD',
+                   ifelse(Type == 'LAKE', '#40E0D0', 
+                    ifelse(Type %in% c('TIDAL','FRESHWATER') & Status == 'Active', '#006400',
+                     ifelse(Type %in% c('TIDAL','FRESHWATER') & Status == 'Inactive', '#E69F00',
+                               'gray60'))))),
+         chla_crit = wCrit$chla_crit[match(WBID,wCrit$WBID)],
+         TN_crit = wCrit$TN_crit[match(WBID,wCrit$WBID)],
+         TP_crit = wCrit$TP_crit[match(WBID,wCrit$WBID)],
+         DO_crit = wCrit$DO_crit[match(WBID,wCrit$WBID)],
+         Ecoli_crit = wCrit$Ecoli_crit[match(WBID,wCrit$WBID)],
+         Entero_crit = wCrit$Entero_crit[match(WBID,wCrit$WBID)])
+
+# # Generate an interactive map of wqShp
+leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = TRUE,
+                                                   zoomSnap = 0.1, 
+                                                   zoomDelta = 1)) |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+  leaflet::setView(lng = -82.72, lat = 27.905, zoom = 10.6) |>
+  leaflet::addPolygons(data = wqShp,
+    weight = 1.5,
+    fillOpacity = 0.3,
+    stroke = TRUE,
+    color = 'black',
+    opacity = 0.7,
+    fill = TRUE,
+    fillColor = ~color,
+    label = ~ID,
+    highlightOptions = leaflet::highlightOptions(color = 'white',
+                                                 weight = 4,
+                                                 opacity = 0.5))
+
+#'*----------------------------GENERATE MAP-----------------------------------*
+
+# Start by creating the base map with tiles and layers control options
+m <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = TRUE, 
+                                                        zoomSnap = 0.1, 
+                                                        zoomDelta = 1)) |>
+  leaflet::addTiles(attribution = '') |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron, group = 'CartoDB.Positron') |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.DarkMatter, group = 'CartoDB.DarkMatter') |>
+  leaflet::addProviderTiles(leaflet::providers$Esri.WorldImagery, group = 'Esri.WorldImagery') |>
+  leaflet::addProviderTiles(leaflet::providers$Esri.WorldTopoMap, group = 'Esri.WorldTopoMap') |>
+  leaflet::addProviderTiles(leaflet::providers$OpenTopoMap, group = 'OpenTopoMap') |>
+  leaflet::setView(lng = -82.72, lat = 27.905, zoom = 10.6)
+
+# Iterate over each unique type in wqShp to add them as separate polygon layers.
+# This will allow users to highlight specific waterbody types:
+for (type in unique(wqShp$Type)) {
+  m <- m |> leaflet::addPolygons(
+    data = wqShp[wqShp$Type == type,],
+    group = type,  
+    weight = 0.8,
+    fillOpacity = 0.3,
+    stroke = TRUE,
+    # color = ~statColor,
+    color = 'black',
+    opacity = 0.7,
+    fill = TRUE,
+    fillColor = ~color,
+    label = ~ID,
+    highlightOptions = leaflet::highlightOptions(color = 'white', weight = 4,
+                                                 opacity = 0.5)) 
+}
+
+# # details for site status legend:
+# shapes <- c('rect', 'rect','rect')
+# symbols <- setNames(Map(
+#   f = leaflegend::makeSymbol,
+#   shape = shapes,
+#   fillColor = 'white',
+#   color = c('green','red','darkgray'),
+#   opacity = 1,
+#   fillOpacity = 0.5,
+#   height = 20,
+#   width = 20,
+#   'stroke-width' = 5), 
+#   shapes)
+
+
+# details for WBID color legend:
+Sshapes <- c('rect', 'rect','rect','rect','rect','rect')
+Ssymbols <- setNames(Map(
+  f = leaflegend::makeSymbol,
+  shape = Sshapes,
+  color = 'black',
+  fillColor = c('#00244c','#6A5ACD','#40E0D0','#006400','#E69F00','#696969'),
+  opacity = 1,
+  fillOpacity = 0.5,
+  height = 20,
+  width = 20,
+  'stroke-width' = 1), 
+  Sshapes)
+
+
+# Highlight specific polygon based on WBID. Initially select WBID 1474 and add
+# the WBID highlight legend:
+m <- m |> leaflet::addPolygons(
+  data = wqShp[wqShp$WBID == 1474,],
+  layerId = 'shape',
+  fillOpacity = 0.17,
+  stroke = TRUE,
+  color = 'green',
+  fill = TRUE,
+  fillColor = ~color,
+  label = ~ID) |> 
+  leaflet::addLayersControl(
+  position = "topleft",  
+  baseGroups = c("CartoDB.Positron", "CartoDB.DarkMatter", "Esri.WorldImagery", 
+                 "Esri.WorldTopoMap", "OpenTopoMap"),
+  overlayGroups = c(unique(wqShp$Type)),
+  options = leaflet::layersControlOptions(collapsed = TRUE)) |>
+  leaflet::addScaleBar(position = 'bottomleft') |>
+  # leaflegend::addLegendImage(
+  #  images = symbols,
+  #   labels = c('Active', 'Inactive','Not Sampled'),
+  #   labelStyle = "font-size: 14px;",
+  #   width = 15,
+  #   height = 13,
+  #   orientation = 'vertical',
+  #   title = htmltools::tags$div('Site Status',
+  #                               style = 'font-size: 15px; text-align: center;
+  #                               font-weight: bold;'),
+  #   position = 'bottomright'
+  # ) |>
+  leaflegend::addLegendImage(
+    images = Ssymbols,
+    labels = c('Coastal-Active','Coastal-Inactive','Lake','Stream-Active', 'Stream-Inactive',
+               'Not Sampled'),
+    labelStyle = "font-size: 14px;",
+    width = 15,
+    height = 11,
+    orientation = 'vertical',
+    title = htmltools::tags$div('Site Type',
+                                style = 'font-size: 15px; text-align: center;
+                                font-weight: bold;'),
+    position = 'bottomleft')
+
+#'*---------------------------GATHER DATA---------------------------*
+
+# Get data for each WBID based on click:
+getData <- reactive({ 
+  if (is.null(input$mapplo_shape_click)){
+    strat <- '1474'
+    } else {
+    strat <- getStrata(spDat = wqShp,
+                       lat = input$mapplo_shape_click$lat, 
+                       lng = input$mapplo_shape_click$lng)
+    }
+  data <- data.frame(dplyr::filter(wqM, WBID == strat) |>
+    dplyr::select(Date, DO, chl_a, TN, TP, TSS, Turbidity, Secchi, Temp, Salinity, 
+                  Ecoli, Entero))
+  return(data)
+})
+
+
+mapplo <- leaflet::leafletProxy('mapplo') 
+
+# Change the highlighted watershed:
+observeEvent(input$mapplo_shape_click, {
+      sName <- getStrata(spDat = wqShp,
+                       lat = input$mapplo_shape_click$lat,
+                       lng = input$mapplo_shape_click$lng)
+  mapplo <- mapplo |>
+    leaflet::removeShape('shape') |>
+    leaflet::addPolygons(data = dplyr::filter(wqShp, WBID == sName),
+                layerId = 'shape',
+                    fillOpacity = 0.17,
+      stroke = TRUE,
+      color = ifelse(wqShp$Status[wqShp$WBID == sName] == 'Active', 'green', 
+                     ifelse(wqShp$Status[wqShp$WBID == sName] == 'Inactive', 'red',
+                            'gray')), 
+      fill = TRUE,
+      fillColor = ~color,
+      label = ~ID)
+})
+
+# Get the name of the watershed:
+site <- reactive({
+  if(is.null(input$mapplo_shape_click)){
+    sName <- '1474'
+  } else {
+    sName <- getStrata(spDat = wqShp,
+                       lat = input$mapplo_shape_click$lat,
+                       lng = input$mapplo_shape_click$lng)
+  }
+    return(wqShp$ID[wqShp$WBID == sName])
+})
+
+
+# Dissolved oxygen plot:
+DOplo <- reactive({
+  return(plt(dplyr::select(getData(), Date, DO) |> tidyr::drop_na(), 'Dissolved Oxygen \n(% sat)',
+             wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]))
+  })
+
+# Chlorophyll-a plot:
+chlplo <- reactive({
+  return(plt(dplyr::select(getData(), Date, chl_a) |> tidyr::drop_na(), 'Chlorophyll-a \n(µg/L)',
+             wCrit$chla_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]))
+  })
+
+# Total nitrogen plot:
+TNplo <- reactive({
+  return(plt(dplyr::select(getData(), Date, TN) |> tidyr::drop_na(), 'Total Nitrogen \n(mg/L)',
+             wCrit$TN_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]))
+  })
+
+# Total phosphorus plot:
+TPplo <- reactive({
+  return(plt(dplyr::select(getData(), Date, TP) |> tidyr::drop_na(), 'Total Phosphorus \n(mg/L)',
+             wCrit$TP_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]))
+  })
+
+# Total suspended solids plot:
+TSSplo <- reactive({
+  return(plt(dplyr::select(getData(), Date, TSS) |> tidyr::drop_na(), 'Total Suspended Solids \n(mg/L)'))
+  })
+
+# Turbidity plot:
+NTUplo <- reactive({
+  return(plt(dplyr::select(getData(), Date, Turbidity) |> tidyr::drop_na(), 'Turbidity \n(NTU)'))
+  })
+
+# Secchi depth plot:
+Secplo <- reactive({
+  return(plt(dplyr::select(getData(), Date, Secchi) |> tidyr::drop_na(), 'Secchi Depth \n(m)'))
+  })
+
+# Total phosphorus plot:
+Tplo <- reactive({
+  return(plt(dplyr::select(getData(), Date, Temp) |> tidyr::drop_na(), 'Temperature \n(°C)'))
+  })
+
+# Salinity plot:
+Splo <- reactive({
+  return(plt(dplyr::select(getData(), Date, Salinity) |> tidyr::drop_na(), 'Salinity \n(ppt)'))
+  })
+
+# E. coli plot:
+eplo <- reactive({
+  return(plt(dplyr::select(getData(), Date, Ecoli) |> tidyr::drop_na(), HTML('<em>E. coli</em> \n(MPN/100mL)'),
+             wCrit$Ecoli_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]))
+  })
+
+# Enterococcus plot:
+entplo <- reactive({
+  return(plt(dplyr::select(getData(), Date, Entero) |> tidyr::drop_na(), HTML('<em>Enterococci</em> \n(MPN/100mL)'),
+             wCrit$Entero_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]))
+  })
+
+
+# Return watershed info based on clicked WBID:
+Sinf <- function(site){
+  Sw <- wqShp$WBID[wqShp$ID == site()]
+  if (Sw == 1440) anclote(input, 'info')
+  if (Sw == 1475) hollin(input, 'info')
+  if (Sw %in% c(1508,'1508A')) klosterman(input, 'info')
+  if (Sw == 1474) brooker(input, 'info')
+  if (Sw == '1527B') bee(input, 'info')
+  if (Sw %in% c(1556,'1556A')) cedar(input, 'info')
+  if (Sw == '1538A') curlew(input, 'info')
+  if (Sw %in% c(1569,'1569A')) bishop(input, 'info')
+  if (Sw == '1575A') mullet(input, 'info')
+  if (Sw == 1574) alligator(input, 'info')
+  if (Sw %in% c(1604,'1604B1')) allens(input, 'info')
+  if (Sw %in% c('1627B',1627)) long(input, 'info')
+  if (Sw == '1624A') roosevelt(input, 'info')
+  if (Sw %in% c(1633,'1633B','1633D','1633E')) mckay(input, 'info')
+  if (Sw == '1668A') joes(input, 'info')
+  if (Sw == '1486A') lt(input, 'info')
+  if (Sw %in% c('1618_N','1618_S')) sa_b(input, 'info',site)
+  if (Sw == 1643) church(input, 'info')
+  if (Sw %in% c(1641,1625)) cross(input, 'info')
+  if (Sw %in% c('1558I','1558H2')) otbN(input, 'info',site)
+  if (Sw %in% c('1558H','1558G')) otbS(input, 'info',site)
+  if (Sw %in% c('1558F','1661')) rb(input, 'info',site)
+  if (Sw %in% c('8045','1528C','1528')) sjs(input, 'info',site)
+  if (Sw %in% c('1528A','1694B','1694A','1558N')) bcb(input, 'info',site)
+  if (Sw == '1618C') cross_bayou(input, 'info')
+  if (Sw %in% c(1529,'1541B','1530A',1530,'1541C',1550,'1603B','1603D','1574A','1567C','1662A',
+                                            '1618D',1614,'1668B','1668D','1558C','1558B',
+                                            1683,'1709D','1709F',1696,'1716A',1700)) tbd(input, 'info')
+  if (Sw == 'Not Sampled') noInfo(input, 'info')
+}
+
+```
+
+Overview
+===========================================================
+
+## Column {.tabset .tabset-fade data-width=650}
+
+
+<div class = "row">
+<div class = "col-md-2"></div>
+<div class = "col-md-8">
+
+
+#### WELCOME TO THE PINELLAS COUNTY WATER QUALITY DASHBOARD!
+
+```{r, echo = FALSE, out.width = '100%', fig.align = 'center', fig.alt='Image of Fort De Soto Park with coastline'}
+knitr::include_graphics('www/banner.png')
+```
+
+#### Who We Are and What We Do
+The Pinellas County Division of Environmental Management (PCDEM), part of the Pinellas County Public Works Department, is committed to safeguarding environmental health through data collection and application of sound scientific principles. The Division achieves water resource goals by conducting routine water monitoring throughout the county and the surrounding coastal waters. Water samples are collected to determine chemical, physical, and biological elements of streams, lakes, and marine waters within unincorporated Pinellas County and in partnership with various municipalities. Habitat and aquatic species surveys are done at specific times of the year to monitor macroinvertebrates, phytoplankton (including red tide), and benthic and seagrass indicators. Visit our [website](https://pinellas.gov/programs/water-quality-monitoring-program/){target="_blank"} to learn more about our various habitat monitoring programs.
+
+#### Why Water Quality Matters
+Water quality is more than just a scientific measure; it's a reflection of the health of our entire ecosystem. Clean water is a home for wildlife and a playground for us – the land and water within the landscape, or watershed, is where we live, work, and play. However, sometimes, water can have too much of certain substances like nutrients, sediment, and bacteria. While nutrients are necessary for aquatic life, in excess, they can be detrimental and lead to overgrowth of algae, resulting in reduced oxygen throughout the waterbody. The process of nutrient enrichment, known as eutrophication, can harm fish and other aquatic organisms as well as block sunlight from reaching aquatic vegetation, including seagrass, and can impair their growth. Healthy seagrass and other aquatic vegetation is important for maintaining healthy levels of dissolved oxygen and providing habitat and food for many marine animal species.
+
+#### Our Success Story – Tampa Bay
+Tampa Bay continues to be recognized for water quality and habitat restoration efforts because of collaboration between government entities, academic research, and local stakeholder involvement. Over the last four decades, there has been a concerted effort to improve the bay's water quality through monitoring and adaptive management strategies. Although managing these environmental resources is a continual effort, the success of nutrient reduction in the bay is a testament to what can be achieved through persistent and coordinated environmental management.
+
+#### This Dashboard
+This dashboard is designed to make the Division’s (PCDEM) monitoring results accessible and summarize how the lakes, streams, and coastal waters measure up compared to past conditions and based on regulatory and management targets. Click on the tabs "Data Selection" drop down menu above to explore the different data types and learn more about our water quality and other habitat monitoring data.
+
+This dashboard provides several types of data for exploration, including:
+
+1) [__Water Quality__](#water-quality): Water quality data from monitoring sites throughout Pinellas County.
+<!-- 1) [__Stream Flow__](#stream-flow): USGS gage stations that monitor stream flow, water level, and precipitation. -->
+<!-- 1) [__Stream Index__](#stream-index): Stream condition index data from various streams in Pinellas County. -->
+1) [__Red Tide__](#red-tide): Current Pinellas County red tide data.
+<!-- 1) [__Seagrass__](#seagrass): Seagrass survey data from Pinellas County coastal waters (in development). -->
+1) [__Data Downloads__](#data-downloads): Downloadable water quality data.
+
+The page source content can be viewed on [Github](https://github.com/PCDEM){target="_blank"}.
+
+Technical questions about water quality data can be sent to [Stacey Day](mailto:sday@pinellas.gov). Questions and comments about the dashboard can be sent to [Alex Manos](mailto:almanos@pinellas.gov).
+
+<br/><br/>
+
+```{r, echo = FALSE, out.width = '60%', fig.align = 'center', fig.alt='County staff collecting data',fig.cap='Pinellas County staff conducting various types of environmental monitoring activities.'}
+# knitr::include_graphics('www/collage2.png')
+```
+
+</div>
+<div class = "col-md-2"></div>
+</div>
+
+
+Water Quality 
+===========================================================
+
+## Column {.tabset .tabset-fade data-width="280"}
+
+```{r}
+# Initialize a reactive value to track if a water quality subtab has been clicked yet:
+firstClick <- reactiveVal(TRUE)
+
+# UI for the initial informational popup:
+txt <- modalDialog(
+  title = "NAVIGATING THE WATER QUALITY DATA PAGE",
+  HTML("<em>NOTE: This dashboard is still under development and some features may not be fully functional or respond as expected. Please report any issues to almanos@pinellas.gov.</em>"),
+  tags$p(""),
+  br(),
+  HTML("<b>Getting started:</b>"),
+  tags$p(""),
+  tags$li("Click 'MAP' to view our sampled watersheds."),
+  tags$p(""),
+  tags$li("Click 'USING THIS TAB' for tab function guidance."),
+  tags$p(""),
+  tags$li("Click 'BACKGROUND' for general information."),
+  br(),
+  HTML("<b>Viewing the data:</b>"),
+  tags$p(""),
+  tags$li("Click any of the colored shapes (watersheds) to view plots and status."),
+  tags$p(""),
+  tags$li("Click the label at the top of the map for information about the watershed."),
+  tags$p(""),
+  tags$li("The plots are interactive; use the cursor to highlight data points."),
+  tags$p(""),
+  tags$li("Click through the tabs to view different water quality parameters."),
+  br(),
+  HTML("<b>Downloading the data:</b>"),
+  tags$p(""),
+  tags$li("Click the 'Data Downloads' tab at the top of the page to view raw data."),
+  tags$p(""),
+  # tags$li("Click the 'Water Quality' tab to view and search the raw data."),
+  # tags$p(""),
+  tags$li("Click the 'Download Data' button to download a copy of the data."),
+  easyClose = TRUE,
+  footer = NULL
+)
+
+# Make sure initial info popup only displayed once and not again after subtab click:
+observeEvent(input$active_tab, {
+  if (input$active_tab == "Water Quality" & firstClick()) {
+    showModal(txt)
+    firstClick(FALSE) 
+  }
+})
+```
+
+
+### MAP
+
+```{r}
+output$mapplo <- leaflet::renderLeaflet(m)
+
+# Create a UI element for the info button:
+output$info <- renderUI({
+  tags$div(id="info-btn-container",
+           actionButton("info", 
+                        label = HTML(paste0("<i class='fas fa-info-circle'></i> ", 
+                                            site())), class = "btn"))
+})
+
+# output map and info button:
+fillCol(flex = c(NA,1,1),
+        uiOutput('info'),
+        leaflet::leafletOutput('mapplo'))
+
+# Change watershed info button name:
+observeEvent(input$info, {
+  Sinf(site())
+})
+
+# UI for the initial informational popup:
+nsModal <- modalDialog(
+  title = "NOTICE",
+  HTML("<b>Pinellas County stopped water quality sampling in this area in 2012. For more recent data please contact the City of St. Petersburg Public Works at waterdept@stpete.org.</b>"),
+  easyClose = TRUE,
+  footer = NULL
+)
+
+observeEvent(input$mapplo_shape_click, {
+  if (site() %in% c('SMACKS BAYOU','TAMPA BAY (UPPER SEGMENT)','TAMPA BAY (MIDDLE SEGMENT)',
+                    'BOOKER CREEK','COFFEEPOT BAYOU','34TH STREET BASIN',
+                    'FRENCHMANS CREEK - BASIN U','BAYOU CREEK')) {
+    showModal(nsModal)
+  }
+})
+
+```
+
+
+### USING THIS TAB
+
+#### Overview
+This tab shows water quality data located around Pinellas
+County, encompassing both marine and freshwater habitats. The PCDEM
+utilizes two methods for water quality sampling: fixed sites for streams and
+stratified random sampling for lakes and coastal waterways.
+
+<br> 
+
+#### Navigating the Map
+Use the cursor to hover over the sites on the Map tab and click any to view water
+quality data for that site. Refer the legend on the bottom left of the map which
+denotes both the type of water body and the status of monitoring activity within 
+that area. There are coastal, lake, stream, and not sampled sites, of which may
+active (current monitoring activities) or inactive (previous monitoring conducted,
+but none currently).
+
+<br>
+```{r, fig.align = 'center', out.width = '30%', fig.alt='Map legend'}
+knitr::include_graphics('www/legend.png')
+```
+<br>
+
+Click the informational button at the top right of the map to view more information
+about the selected site. 
+
+<br>
+
+#### Viewing the Data
+To view the data, click the site of interest and the graphs to the right will
+display historical data for the site, if available. There are several tabs that
+display different types of water quality data. The panel to the far right displays
+a gauge for the threshold criteria used by the Florida Department of Environmental
+Protection (FDEP) for water quality standards. The gauge is color-coded to show
+the status of the water quality for the selected parameter: green is within acceptable
+limits and red is exceeding the limit.
+
+The time-series plots are interactive; the cursor can be used to view the date and 
+data for each point and highlight different portions of the plot. A
+[control menu](https://help.plot.ly/zoom-pan-hover-controls/){target="_blank"} will also
+appear when moving the cursor inside the plot area.
+
+<br>
+```{r, fig.align = 'center', out.width = '70%', fig.alt='Plot control menu options'}
+knitr::include_graphics('www/plotcontrols.PNG')
+```
+<br>
+
+Use this menu to zoom, pan, and download the plot as a png file.
+
+<br> 
+
+#### Report Card
+The Report Card tab displays as "Pass/Fail" classification for selected parameters
+at the selected site over the period-of-record data. For more information about 
+the specific criteria used or the calculations involved, please visit out Github 
+page which can be accessed by clicking the "Source Code" button at the top of the 
+dashboard.
+
+<br> 
+
+#### Annual Report
+Click the annual report tab view and download our most recent annual water quality 
+report. This document is a detailed description of water quality sampling program
+including sampling design, methods, data analysis, and results. 
+
+
+### BACKGROUND
+
+#### Land-Based Sites
+
+The fixed, land-based sites (green dots on map below) are located in streams, ditches,
+canals, and small lakes around the county. The county is divided into 52
+watersheds (the land area that drains into a receiving body of water) and these fixed sites are selected in a way to maximize the coverage area for sampling. The shapes on the watershed map are divided into water body identification numbers (WBIDs), as defined by the [Florida Deparment of Environmental Protection (FDEP)](https://floridadep.gov/dear/watershed-assessment-section/content/basin-411-0){target="_blank"}. These WBIDs help scientists and regulators focus management efforts on specific locations based on the impairment of the water body within each WBID boundary. If two or more water quality sites are located within the same WBID, the data from these sites are averaged to represent the water quality for that WBID and is displayed in the graphs. Click the Data Downloads tab to view site-specific data.
+
+<br>
+```{r, fig.align = 'center', out.width = '70%', fig.alt = 'Map of Pinellas County with land-based water quality sites'}
+knitr::include_graphics('www/lr.png')
+```
+<br>
+
+#### Coastal Sites
+
+Water quality is also monitored in the coastal waters and lakes (Lakes Tarpon and Seminole) and follow a similar design to the FDEP WBID with the exception of a few sites which combine/divide WBIDs. On the map tab, marine waters are dark blue and the lakes are light blue. The figure below shows the distribution of
+these sampling areas (strata). However, sites E6 And E7 (Middle Tampa Bay) are part of the City of St.
+Petersburg water quality monitoring program and are not included in the
+counties geographic coverage. Similarly water quality data is not collected by PCDEM in any of the streams or lakes in St. Petersburg. Please contact the [City of St. Petersburg](https://www.stpete.org/){target="_blank"} for more information on their water quality monitoring program.
+
+
+<br>
+```{r, fig.align = 'center', out.width = '70%', fig.alt = 'Map of Pinellas County with coastal water quality sites'}
+knitr::include_graphics('www/strata.png')
+```
+<br>
+
+#### Sampling Design
+
+The strata sites (as well as the land sites) are sampled eight times a year (given
+adequate conditions). Since the strata sites are selected based on a
+[stratified random sampling design](https://www.epa.gov/quality/selecting-sampling-design#str){target="_blank"}, the sites within each stratum are different during
+each sampling event. Each stratum is divided into equally sized hexagons
+as shown below for stratum W8.
+
+<br>
+```{r, fig.align = 'center', out.width = '70%', fig.alt = 'Grid of hexagons showing sampling design'}
+knitr::include_graphics('www/hex.jpg')
+```
+<br>
+
+A computer program is then used to randomly select points within each
+hexagon with equal probability provided to each hexagon. For each sampling event, four points are selected throughout the individual stratum and are labeled A, B, C, and D. The data displayed for the stratum on the time-series plots are an average of those four points. Click the "Data Downloads" tab to view site-specific data. For more information on our water quality sampling design, types of data collected, long-term water quality trends, and summary statistics click on the "Annual Report" tab.
+
+
+## Column {.tabset .tabset-fade data-width="610"}
+
+### Oxygen, Nutrients, & Chlorophyll-a
+
+```{r}
+
+# Display the data for DO, chl_a, TN, and TP
+fillCol(flex = c(1,rep(1,4)),
+        pltmsg(getData, "DO", DOplo),
+        pltmsg(getData, "chl_a", chlplo),
+        pltmsg(getData, "TN", TNplo),
+        pltmsg(getData, "TP", TPplo))
+
+```
+
+### Water Clarity
+
+```{r}
+
+# Display the data for TSS, turbidity, and Secchi. Secchi not collected on stream 
+# sites, only lakes and coastal water:
+fillCol(flex = c(1,rep(1,3)),
+    pltmsg(getData, "TSS", TSSplo),
+    pltmsg(getData, "Turbidity", NTUplo),
+    pltmsg(getData, "Secchi", Secplo))
+
+```
+
+### Temperature & Salinity
+
+```{r}
+
+# Display the data for temperature and salinity:
+fillCol(flex = c(1,rep(1,3)),
+    pltmsg(getData, "Temp", Tplo),
+    pltmsg(getData, "Salinity", Splo))
+
+```
+
+### Bacteria
+
+```{r}
+
+# Bacteria samples only collected in freshwater and tidal stream sites:
+fillCol(flex = c(1,rep(1,2)),
+    pltmsg(getData, "Ecoli", eplo),
+    pltmsg(getData, "Entero", entplo))
+
+```
+
+### Report Card
+
+```{r}
+
+# Create slider input to narrow down the report card:
+sliderInput('year','Select year range',min=2003,max=lubridate::year(Sys.Date())-1,
+            value=c(2003,lubridate::year(Sys.Date())-1),step=1,sep="",
+            width='95%')
+
+# Update the slider with years available at each site:
+observe({
+    updateSliderInput(session, 'year', min = min(lubridate::year(getData()$Date)), 
+                     max = ifelse(max(lubridate::year(getData()$Date)) == lubridate::year(Sys.Date()),
+                                  max(lubridate::year(getData()$Date))-1,
+                                  max(lubridate::year(getData()$Date))),
+                    value = c(min(lubridate::year(getData()$Date)),
+                              ifelse(max(lubridate::year(getData()$Date)) == lubridate::year(Sys.Date()),
+                                     max(lubridate::year(getData()$Date))-1,
+                                     max(lubridate::year(getData()$Date)))))
+})
+
+
+# med <- purrr::partial(median, na.rm = TRUE)
+# sdv <- purrr::partial(sd, na.rm = TRUE)
+# minN <- purrr::partial(min, na.rm = TRUE)
+# maxN <- purrr::partial(max, na.rm = TRUE)
+# 
+# sumStats <- reactive({
+#   
+#   x <- data.frame(wqM |>
+#   dplyr::filter(WBID == 1440))
+#   
+#   # Make a table of summary statistics for each parameter (DO, chl_a, TN,TP,TSS,Turbidity,
+# # Secchi, Temp, Salinity, Ecoli, and Entero) and put it in a table:
+# p <- x |>
+#   dplyr::select(DO, chl=chl_a, TN, TP, TSS, Turbidity, Secchi, Temp, Salinity, Ecoli, Entero) |>
+#   dplyr::summarise(
+#     dplyr::across(
+#       dplyr::everything(), list(n = ~sum(!is.na(.)),`Min.`=minN,`Max.` = maxN,
+#                                 mean = mean_n, 
+#                                 geom = psych::geometric.mean,
+#                                       median = med, stddev = sdv))) |>
+#   round(2) |>
+#   tidyr::pivot_longer(cols = everything(), names_to = "key", values_to = "value") %>%
+#   tidyr::separate(key, into = c("param", "stat"), sep = "_") %>%
+#   tidyr::pivot_wider(names_from = "stat", values_from = "value") |>
+#   dplyr::rename(Parameter = param, Mean = mean, `Geometric Mean` = geom,
+#          Median = median, `Std. Deviation` = stddev)
+# 
+# plotly::plot_ly() |>
+#   plotly::add_trace(type = "table",
+#             header = list(values = c("Parameter", "n","Min.","Max.","Mean", "Geometric Mean",
+#                                      "Median","Std. Deviation"),
+#                           align = c("center", "center"),
+#                           fill = list(color = "#BCBCBC")),
+#             cells = list(values = list(p$Parameter,p$n,p$Min.,p$Max.,p$Mean, p$`Geometric Mean`, 
+#                                        p$Median, p$`Std. Deviation`),
+#                          align = c("center", "center"),
+#                          fill = list(color = "white", color = c("grey")),
+#                          height=20,
+#                          font = list(size=12)))
+# })
+
+
+
+
+# WBID specific pass/fail summary:
+rcd <- reactive({
+
+  # Select the data used for the report card:
+  rd <- data.frame(wqIn |>
+    dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()])  |>
+    dplyr::select(Date, WBID, Type, Level, chl_a = `Chl-a`, chla_q = `Chla_q`,
+                  DOsat = `DO%`, DOsat_q = `DO%_q`, TKN, TKN_q, NOX,
+                      NOX_q, TP, TP_q, E_coli, Eco_q, Enterococci, EC_q)) |>
+    dplyr::group_by(Date,WBID,Type) |>
+    dplyr::summarise_if(is.numeric, mean, na.rm = TRUE)
+
+    # Remove data if it has certain qualifiers associated with it:
+    for(i in seq(3,ncol(rd)-1,2)){
+      rd[,i][which(grepl('J|Y|\\?|\\*\\*',rd[,i+1]) == TRUE)] <- NA
+    }
+
+  # Calculate the 10% exceedance criteria for DO:
+  do <- data.frame(rd |>
+    dplyr::group_by(Year = lubridate::year(Date), Type) |>
+    dplyr::filter(Year != lubridate::year(Sys.Date())) |>
+    dplyr::summarise(
+      total_samples = dplyr::n(),
+      n_below = ifelse(Type == 'Coastal', length(which(DOsat < 42)),
+                       length(which(DOsat < 38)))) |>
+    dplyr::distinct() |>
+    dplyr::mutate(do_grade = ifelse((n_below/total_samples) > 0.1, 'Fail', 'Pass')))
+
+  # Calculate the geometric mean exceedence for chl-a, TP, TN, E.coli, and Enterococci
+  # and compare to WBID specific FDEP criteria for pass/fail:
+  nubact <- data.frame(
+    rd |>
+      dplyr::mutate(TN = TKN + NOX) |>
+      dplyr::select(Date, WBID, Type,chl_a, TP,TN,E_coli,Enterococci) |>
+      dplyr::group_by(Year = lubridate::year(Date), WBID, Type) |>
+      dplyr::summarise(dplyr::across(c(chl_a,TP,TN,E_coli,Enterococci), \(.)
+                                     psych::geometric.mean(., na.rm = TRUE))) |>
+      
+      # dplyr::summarise(if(wqShp$WBID[wqShp$ID == site()] %in% c('1558I','1558H','1558H2','1558G','1558F',
+      #                                      1661,'1528A','1558N','1694A','1694B','1618C'))
+      #   dplyr::across(chl_a),mean,na.rm=TRUE) |>
+      dplyr::mutate(
+        chl_grade = ifelse(chl_a >= wCrit$chla_crit[wCrit$WBID == WBID],'Fail','Pass'),
+        tp_grade = ifelse(TP >= wCrit$TP_crit[wCrit$WBID == WBID],'Fail','Pass'),
+        tn_grade = ifelse(TN >= wCrit$TN_crit[wCrit$WBID == WBID],'Fail','Pass'),
+        ecoli_grade = ifelse(E_coli >= wCrit$Ecoli_crit[wCrit$WBID == WBID],'Fail','Pass'),
+        entero_grade = ifelse(Enterococci >= wCrit$Entero_crit[wCrit$WBID == WBID],'Fail','Pass')) |>
+      dplyr::filter(Year != lubridate::year(Sys.Date()))
+    )
+
+  # Combine the DO and nutrient exceedence data:
+  rc <- dplyr::bind_cols(do, nubact) |>
+    dplyr::select(Year = 'Year...1',`Chlorophyll-a` = chl_grade, 
+                  `Dissolved Oxygen` = do_grade, `Total Phosphorus` = tp_grade,
+                  `Total Nitrogen` = tn_grade, `E. coli` = ecoli_grade, Enterococci = entero_grade) |>
+    dplyr::select_if(~!all(is.na(.))) |>
+    dplyr::mutate(across(everything(), ~replace(., is.na(.), ''))) |>
+    dplyr::filter(Year >= input$year[1] & Year <= input$year[2])
+
+  # Create the table:
+  plotly::plot_ly(
+  type = 'table',
+  header = list(
+    values = names(rc),
+    line = list(color = 'white'),
+    fill = list(color = '#BCBCBC'),
+    align = 'center',
+    font = list(color = 'white', size = 13),
+    height = 25,
+    width = 20),
+  cells = list(
+    values = rbind(rc$Year, rc$`Chlorophyll-a`, rc$`Dissolved Oxygen`, 
+                   rc$`Total Phosphorus`, rc$`Total Nitrogen`, rc$`E. coli`, rc$Enterococci),
+    line = list(color = 'black'),
+    fill = list(color = rbind(
+      rep('white', length(rc$Year)),
+      ifelse(rc$`Chlorophyll-a` == "Pass", "#c6e0b4", ifelse(rc$`Chlorophyll-a` == "Fail", "#f4b084", "white")),
+      ifelse(rc$`Dissolved Oxygen` == "Pass", "#c6e0b4", ifelse(rc$`Dissolved Oxygen` == "Fail", "#f4b084", "white")),
+      ifelse(rc$`Total Phosphorus` == "Pass", "#c6e0b4", ifelse(rc$`Total Phosphorus` == "Fail", "#f4b084", "white")),
+      ifelse(rc$`Total Nitrogen` == "Pass", "#c6e0b4", ifelse(rc$`Total Nitrogen` == "Fail", "#f4b084", "white")),
+      ifelse(rc$`E. coli` == "Pass", "#c6e0b4", ifelse(rc$`E. coli` == "Fail", "#f4b084", "white")),
+      ifelse(rc$Enterococci == "Pass", "#c6e0b4", ifelse(rc$Enterococci == "Fail", "#f4b084", "white")))),
+    align = 'center',
+    font = list(color = 'black', size = 13),
+    height = 25)) |>
+    plotly::layout(title = list(text = paste('Water Quality Report Card for', 
+                                             stringr::str_to_title(site()), 'Watershed'),
+             font = list(size = 20)),
+             margin = list(t = 30))
+})
+
+ # display table
+ fillCol(flex = c(1,1,1),
+     #  plotly::renderPlotly(sumStats()),
+       plotly::renderPlotly(rcd()))
+ 
+```
+
+### Annual Report
+
+```{r}
+# Display a annual report PDF:
+fillCol(flex = c(1,0.1),
+  tags$iframe(style = "border: none; width: 100%; height: 100%;",
+              src = "2022 PCDEM Ambient Water Quality Report.pdf"))
+```
+
+
+
+
+## Column {.tabset .tabset-fade data-width="230"}
+
+### Most Recent Data
+
+```{r}
+
+# JavaScript to get name of active tab:
+tags$script("
+$(document).on('shown.bs.tab', 'a[data-toggle=\"tab\"]', function (e) {
+  Shiny.setInputValue('active_tab', $(e.target).text());
+});
+")
+
+
+# Gauge plot colors:
+cls = c('green','yellow','red')
+
+# Gauge plot for DO displays most recent value:
+output$DOg <- highcharter::renderHighchart({
+  gauge(data = dplyr::select(getData(), Date, DO), var = 'Dissolved Oxygen',unit='%',
+        max= 100, g1 = wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+        round = 1,
+        g2=100,r1=0,r2=wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]])
+})  
+
+# Gauge plot for Chl-a displays most recent value:
+output$chlg <- highcharter::renderHighchart({
+  gauge(data = dplyr::select(getData(), Date, chl_a), var = 'Chlorophyll-a',unit=' µg/L',
+        max = 40,g1=0,g2=wCrit$chla_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+        round=1,
+        r1=wCrit$chla_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+        r2=40)
+})
+
+# Gauge plot for TN displays most recent value:
+output$TNg <- highcharter::renderHighchart({
+  gauge(data = dplyr::select(getData(), Date, TN), var = 'Total Nitrogen',unit=' mg/L',
+        max = 3,g1=0,g2=wCrit$TN_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+        round=2,
+        r1=wCrit$TN_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+        r2=3)
+})
+
+# Gauge plot for TP displays most recent value:
+output$TPg <- highcharter::renderHighchart({
+  gauge(data = dplyr::select(getData(), Date, TP), var = 'Total Phosphorus',unit=' mg/L',
+        max = 0.6,g1=0,g2=wCrit$TP_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+        round=2,
+        r1=wCrit$TP_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+        r2=1)
+})
+
+# Gauge plot for TSS displays most recent value:
+output$TSSg <- highcharter::renderHighchart({
+  gauge(data = dplyr::select(getData(), Date, TSS), var = 'Total Suspended Solids',unit=' mg/L',
+        max = 16,g1=0,g2=16,round=2,r1=0,r2=0)
+})
+
+# Gauge plot for turbidity displays most recent value:
+output$Turg <- highcharter::renderHighchart({
+  gauge(data = dplyr::select(getData(), Date, Turbidity), var = 'Turbidity',unit=' NTU',
+        max = 20,g1=0,g2=20,round=2, r1=0, r2=0)
+})
+
+# Gauge plot for secchi displays most recent value:
+output$Secg <- highcharter::renderHighchart({
+  gauge(data = dplyr::select(getData(), Date, Secchi), var = 'Secchi Depth',unit=' m',
+        max = 4,g1=0,g2=4,round=2,r1=0,r2=0)
+})
+
+# Gauge plot for temperature displays most recent value:
+output$Tg <- highcharter::renderHighchart({
+  gauge(data = dplyr::select(getData(), Date, Temp), var = 'Temperature',unit='°C',
+        max = 30,g1=0,g2=30,round=2,r1=0,r2=0)
+})
+
+# Gauge plot for salinity displays most recent value:
+output$Sg <- highcharter::renderHighchart({
+  gauge(data = dplyr::select(getData(), Date, Salinity), var = 'Salinity',unit=' ppt',
+        max = 30,g1=0,g2=30,round=2,r1=0,r2=0)
+})
+
+# Gauge plot for E. coli displays most recent value:
+output$eg <- highcharter::renderHighchart({
+  gauge(data = dplyr::select(getData(), Date, Ecoli), var = HTML('<em>E. coli</em>'),unit=' MPN/100mL',
+        max = 1000,g1=0,g2=wCrit$Ecoli_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+        round=0,
+        r1=wCrit$Ecoli_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+        r2=1000)
+})
+
+# Gauge plot for Enterococci displays most recent value:
+output$entg <- highcharter::renderHighchart({
+  gauge(data = dplyr::select(getData(), Date, Entero), var = HTML('<em>Enterococci</em>'),unit=' MPN/100mL',
+        max = 1000,g1=0,g2=wCrit$Entero_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+        round=0,
+        r1=wCrit$Entero_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+        r2=1000)
+})
+
+# Allows for intial gauge render when first navigating to water quality tab from
+# overview page:
+renderG <- reactiveVal(TRUE)
+
+
+# Obtain the active tab name from JavaScript code and update the gauge plots:
+observeEvent(input$active_tab, {
+  if(input$active_tab == 'Oxygen, Nutrients, & Chlorophyll-a' | renderG()) {
+    output$gaugePlots <- renderUI({
+      fillCol(flex = c(1, rep(1,4)),
+        highcharter::highchartOutput("DOg"),
+        highcharter::highchartOutput("chlg"),
+        highcharter::highchartOutput("TNg"),
+        highcharter::highchartOutput("TPg"),
+      )
+    })
+  } else if(input$active_tab == 'Water Clarity') {
+    output$gaugePlots <- renderUI({
+      fillCol(flex = c(1, rep(1,3)),
+        highcharter::highchartOutput("TSSg"),
+        highcharter::highchartOutput("Turg"),
+        highcharter::highchartOutput("Secg")
+      )
+    })
+  } else if(input$active_tab == 'Temperature & Salinity') {
+    output$gaugePlots <- renderUI({
+      fillCol(flex = c(1, rep(1,2)),
+        highcharter::highchartOutput("Tg"),
+        highcharter::highchartOutput("Sg")
+      )
+    })
+  } else if(input$active_tab == 'Bacteria') {
+    output$gaugePlots <- renderUI({
+      fillCol(flex = c(1, rep(1,2)),
+        highcharter::highchartOutput("eg"),
+        highcharter::highchartOutput("entg")
+      )
+    })
+  } else if(input$active_tab == 'Report Card'){
+    output$gaugePlots <- renderUI({
+      fillCol(flex = c(1, rep(1,5)),
+        HTML('<em>This tab is under development. The Pass/Fail status for each parameter in a watershed is provisional and needs further verification.</em>'),
+          paste('\nThis water quality report card for the',stringr::str_to_title(site()),
+                'watershed is based on criteria set by FDEP with a Pass/Fail status for each parameter determined by annual threshold exceedence of 10% of samples (DO) or geometric mean (all other parameters).'),
+        paste0(''),
+        paste0(''),
+        paste0(''))
+    })
+  } else if(input$active_tab == 'Annual Report'){
+    output$gaugePlots <- renderUI({
+      fillCol(flex = c(1, rep(1,5)),
+          "This report is the most recent annual water quality prepared by the Pinellas County Division of Environmental Managemnet and describes sampling methodology, data trends, water quality summary statistics, and biological monitoring results. For more information about this report or to request previous years' reports, please contact Stacey Day (sday@pinellas.gov).")
+    })
+        }
+  # Need this to allow gauges to update based on clicked tab:
+  renderG(FALSE)
+})
+
+# Display the gauge plots:
+uiOutput("gaugePlots")
+
+
+```
+
+### FDEP Criteria
+
+Some of FDEP's water quality criteria include dissolved oxygen, chlorophyll-a, and nutrients such as nitrogen and phosphorus, which are important indicators of ecosystem health and whose values can impact one another. 
+
+An increase in nutrient levels in the water can can promote the growth of algal blooms and other nuisance aquatic vegetation. As the blooms begin to die off, their decomposition leads to a decrease in dissolved oxygen in the water, which can be harmful to aquatic life. 
+
+The Pass/Fail designation for each parameter is determined by calculating the annual geometric mean and then comparing it to the FDEP standard. If the value exceeds the FDEP standard, the site will get a 'Fail' for that parameter. If the value does not exceed the standard, the site will get a 'Pass'. Visit the FDEP Water Quality Standards [webpage](https://floridadep.gov/DEAR/Water-Quality-Standards){target="_blank"} for more information about specific water quality criteria throughout the state of Florida.
+
+
+
+<!-- Stream Flow -->
+<!-- =========================================================== -->
+
+<!-- ## Column {.tabset .tabset-fade data-width="280"} -->
+
+<!-- ```{r USGS, include=FALSE} -->
+
+<!-- # USGS stream gage sites in Pinellas County: -->
+<!-- sites <- c('02307323','02307359','02307359','02307362','02307445','02309447', -->
+<!--            '02307496','02307498','02309425','02309421','02309415','02307668', -->
+<!--            '02307669','02307674','02309200','02309110','02307780','02308859', -->
+<!--            '02308861','02308870','02308889','02308950','02310075') -->
+
+<!-- # Parameters to retrieve from USGS: -->
+<!-- # 00045 = Total Precipitation (in) -->
+<!-- # 00060 = Stream Flow (ft^3/s) -->
+<!-- # 00065 = Gage height (ft) -->
+<!-- codes <- c('00045', '00060', '00065') -->
+
+<!-- # Get info on data available at each site: -->
+<!-- Udat <- dataRetrieval::whatNWISdata(siteNumber = sites) |> -->
+<!--   dplyr::filter(data_type_cd != 'qw', parm_cd %in% codes) -->
+
+
+
+
+
+
+<!-- # -->
+<!-- # # Retrieve data from USGS NWIS: -->
+<!-- # Usite <- function(data,param,stat){ -->
+<!-- #   f <- data |> dplyr::filter(parm_cd == param, stat_cd == stat) -->
+<!-- #   g <- dataRetrieval::readNWISdv(siteNumbers = f$site_no, -->
+<!-- #                                  parameterCd = param, -->
+<!-- #                                  statCd = stat, -->
+<!-- #                                  startDate = f$begin_date, -->
+<!-- #                                  endDate = f$end_date) -->
+<!-- #   View(g) -->
+<!-- #   return(list(g=g,f=f)) -->
+<!-- # } -->
+<!-- # -->
+<!-- # t <- Udat |> -->
+<!-- #   dplyr::filter(site_no == '02307498') -->
+<!-- # -->
+<!-- # -->
+<!-- # Usite(t, '00065','00003') -->
+
+
+
+
+<!-- Uinit <- '02309425' -->
+
+<!-- # Start by creating the base map with tiles and layers control options -->
+<!-- Um <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = TRUE, -->
+<!--                   zoomSnap = 0.1, zoomDelta = 1, attributionControl = FALSE)) |> -->
+<!--   leaflet::addTiles() |> -->
+<!--   leaflet::addProviderTiles(leaflet::providers$Esri.WorldImagery, group = 'Esri.WorldImagery') |> -->
+<!--   leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron, group = 'CartoDB.Positron') |> -->
+<!--   leaflet::addProviderTiles(leaflet::providers$CartoDB.DarkMatter, group = 'CartoDB.DarkMatter') |> -->
+
+<!--   leaflet::addProviderTiles(leaflet::providers$Esri.WorldTopoMap, group = 'Esri.WorldTopoMap') |> -->
+<!--   leaflet::addProviderTiles(leaflet::providers$OpenTopoMap, group = 'OpenTopoMap') |> -->
+<!--   leaflet::setView(lng = -82.72, lat = 27.905, zoom = 10.6) |> -->
+<!--   leaflet::addCircleMarkers( -->
+<!--     data = Udat, -->
+<!--     lng = ~dec_long_va, -->
+<!--     lat = ~dec_lat_va, -->
+<!--     radius = 6, -->
+<!--    color = "black", -->
+<!--    fill = TRUE, -->
+<!--    fillColor = 'lightblue', -->
+<!--    weight = 2, -->
+<!--    stroke = TRUE, -->
+<!--    fillOpacity = 0.5, -->
+<!--    label = ~station_nm) |> -->
+<!--   leaflet::addCircleMarkers( -->
+<!--     data = Udat[Udat$site_no == Uinit, ], -->
+<!--     lng = ~dec_long_va, -->
+<!--     lat = ~dec_lat_va, -->
+<!--     layerId = 's', -->
+<!--     stroke = TRUE, -->
+<!--     color = 'black', -->
+<!--     fill = TRUE, -->
+<!--     fillColor = 'red', -->
+<!--     weight = 2, -->
+<!--     fillOpacity = 1, -->
+<!--     radius= 6) |> -->
+<!--   leaflet::addLayersControl( -->
+<!--   position = "topleft", -->
+<!--   baseGroups = c("Esri.WorldImagery","CartoDB.Positron", "CartoDB.DarkMatter", -->
+<!--                  "Esri.WorldTopoMap", "OpenTopoMap")) -->
+
+<!-- ``` -->
+
+<!-- ### Stream Gage Map -->
+
+<!-- ```{r} -->
+
+<!-- Uplo <- leaflet::leafletProxy('Uplo') -->
+
+
+<!-- observeEvent(input$Uplo_marker_click, { -->
+<!--     siteLoc <- Udat %>% dplyr::filter(dec_lat_va == input$Uplo_marker_click$lat & -->
+<!--                        dec_long_va == input$Uplo_marker_click$lng) -->
+<!--   Uplo <- Uplo %>% -->
+<!--     leaflet::removeMarker('s') %>% -->
+<!--     leaflet::addCircleMarkers( -->
+<!--       data = siteLoc, -->
+<!--       lng = ~dec_long_va, -->
+<!--       lat = ~dec_lat_va, -->
+<!--       layerId = 's', -->
+<!--       stroke = TRUE, -->
+<!--       color = 'black', -->
+<!--       fill = TRUE, -->
+<!--       fillColor = 'red', -->
+<!--       weight = 2, -->
+<!--       fillOpacity = 1, -->
+<!--       radius = 6 -->
+<!--     ) -->
+<!-- }) -->
+
+<!-- output$Uplo <- leaflet::renderLeaflet(Um) -->
+<!-- leaflet::leafletOutput('Uplo') -->
+
+<!-- ``` -->
+
+
+
+<!-- ## Column {.tabset .tabset-fade data-width="840"} -->
+
+<!-- ### Discharge, Gage Height, & Precipitation -->
+
+<!-- ```{r} -->
+
+<!-- # Get available USGS data for selected site: -->
+<!-- gage <- reactive({ -->
+<!--   if (is.null(input$Uplo_marker_click)){ -->
+<!--     getDat <- Udat |> -->
+<!--       dplyr::filter(site_no == Uinit) -->
+<!--     } else { -->
+<!--     getDat <- Udat |> -->
+<!--       dplyr::filter(dec_lat_va == input$Uplo_marker_click$lat & -->
+<!--              dec_long_va == input$Uplo_marker_click$lng) -->
+<!--     } -->
+<!--    return(getDat) -->
+<!-- }) -->
+
+
+<!-- # Plot for stream flow: -->
+<!-- output$flow <- plotly::renderPlotly({ -->
+<!--   g <- Usite(gage,'00060','00003') -->
+<!--   Uplt(data = g$g, stnm = g$f$station_nm, title = 'Daily Streamflow', -->
+<!--        yax = 'Discharge (cubic feet per second)') -->
+<!-- }) -->
+
+<!-- # flow <- reactive({ -->
+<!-- #   g <- Usite(gage,'00060','00003') -->
+<!-- #   return(Uplt(data = g$g, stnm = g$f$station_nm, title = 'Daily Streamflow', -->
+<!-- #        yax = 'Discharge (cubic feet per second)')) -->
+<!-- # }) -->
+
+<!-- # Plot for gage height: -->
+<!-- output$gh <- plotly::renderPlotly({ -->
+<!--   g <- Usite(gage,'00065','00003') -->
+<!--   Uplt(data = g$g, stnm = g$f$station_nm, title = 'Daily Gage Height', -->
+<!--        yax = 'Gage Height (ft)') -->
+<!-- }) -->
+
+<!-- # Plot for precipitation: -->
+<!-- output$rain <- plotly::renderPlotly({ -->
+<!--   g <- Usite(gage,'00045','00006') -->
+<!--   Uplt(data = g$g, stnm = g$f$station_nm, title = 'Daily Precipitation', -->
+<!--        yax = 'Precipitation (in)') -->
+<!-- }) -->
+
+<!-- # Render plots: -->
+<!-- fillCol(flex = c(1,rep(1,3)), -->
+<!--         plotly::plotlyOutput('flow'), -->
+<!--         #pltmsg(flow,'X_00060_00003',flow()), -->
+<!--         plotly::plotlyOutput('gh'), -->
+<!--         plotly::plotlyOutput('rain')) -->
+
+<!-- ``` -->
+
+
+<!-- ### Flow Regime -->
+
+<!-- ```{r} -->
+<!--   # Generate 3D time-series: -->
+<!--   output$ts_3d <- plotly::renderPlotly({ -->
+
+<!--    f <- gage() |> dplyr::filter(parm_cd == '00060', stat_cd == '00003') -->
+<!--    g <- dataRetrieval::readNWISdv(siteNumbers = f$site_no, -->
+<!--                          parameterCd = '00060', -->
+<!--                          statCd = '00003', -->
+<!--                          startDate = f$begin_date, -->
+<!--                          endDate = f$end_date) -->
+
+<!--     FlowMatrix       <- data.frame(Day = lubridate::yday(g$Date), -->
+<!--                                    Year = lubridate::year(g$Date), -->
+<!--                                    Var = g[,4]) -->
+<!--     varMat           <- raster::as.matrix(raster::rasterFromXYZ(FlowMatrix)) -->
+<!--     shiny::validate(need(sum(is.na(varMat))/length(varMat) < 0.80, 'Error: Not enough data to generate plot.')) -->
+<!--     rownames(varMat) <- rev(seq(min(FlowMatrix$Year), max(FlowMatrix$Year), 1)) -->
+<!--     y                <- as.numeric(rownames(varMat)) -->
+<!--     tckNum           <- round(seq(1, 366, by = 30.5)) -->
+<!--     tckMo            <- month.abb[lubridate::parse_date_time(tckNum, orders = "j") |> -->
+<!--                                     lubridate::month()] -->
+
+<!--     legTitle <- 'Flow (cfs)' -->
+
+<!--     plotly::plot_ly(height = 900) |> -->
+<!--       plotly::add_surface(z = varMat, -->
+<!--                   y = y, -->
+<!--                   colorbar = list(title = legTitle), -->
+<!--                   colorscale = list(thresholds_colors = seq(0, 1, length = 6), -->
+<!--                                     colors = c('gray', 'blue', 'skyblue', 'green', 'yellow', 'red')), -->
+<!--                   showscale = TRUE) |> -->
+<!--       plotly::layout(title = list(text = dataRetrieval::readNWISsite(g$site_no)$station_nm,x = 0.47, y = 0.92), -->
+<!--              scene=list( -->
+<!--                yaxis = list(title = 'Year', dtick = ifelse(length(unique(FlowMatrix$Year)) <= 10,2,5)), -->
+<!--                zaxis = list(title = legTitle), -->
+<!--                xaxis = list(title = 'Month', autorange = "reversed", -->
+<!--                             tickvals = seq(1, 366, by = 30.5), -->
+<!--                             ticktext = tckMo), -->
+<!--                camera = list(eye = list(x = 1.3, y = 1.3, z = 1.8)))) -->
+<!--   }) -->
+
+<!-- plotly::plotlyOutput('ts_3d') -->
+
+
+<!-- ``` -->
+
+<!-- ### Data Distribution -->
+
+<!-- ```{r} -->
+
+
+<!-- radioButtons('type','Select data type',choices=c('Flow','Gage Height','Precipitation'), -->
+<!--              selected='Flow',inline=TRUE,width='95%') -->
+
+
+<!--   # Monthly boxplots: -->
+<!--   output$month_box <- plotly::renderPlotly({ -->
+<!--       f <- gage() |> dplyr::filter(parm_cd == '00060', stat_cd == '00003') -->
+<!--       dat <- dataRetrieval::readNWISdv(siteNumbers = f$site_no, -->
+<!--                          parameterCd = '00060', -->
+<!--                          statCd = '00003', -->
+<!--                          startDate = f$begin_date, -->
+<!--                          endDate = f$end_date) -->
+<!--     dat$Month <- factor(month.abb[lubridate::month(dat$Date)], levels = month.abb) -->
+<!--     plotly::plot_ly(data = dat, x = ~Month, y = ~X_00060_00003, type = 'box', -->
+<!--             marker = list(color = '#4ABBE6'), -->
+<!--             line = list(color = '#B2B2B2')) |> -->
+<!--       plotly::layout(title = paste('Monthly Distribution of Flow at', -->
+<!--                                    stringr::str_to_title(f$station_nm)), -->
+<!--              xaxis = list(linecolor = 'black',width = 0.5, mirror = TRUE, -->
+<!--                           title = ''), -->
+<!--              yaxis = list(linecolor = 'black',width = 0.5, mirror = TRUE, -->
+<!--                           title = 'Flow (cfs)',rangemode = 'tozero')) -->
+<!--   }) -->
+
+<!--   # Month time series: -->
+<!--   output$month_ts <- plotly::renderPlotly({ -->
+<!--       f <- gage() |> dplyr::filter(parm_cd == '00060', stat_cd == '00003') -->
+<!--       dat <- dataRetrieval::readNWISdv(siteNumbers = f$site_no, -->
+<!--                          parameterCd = '00060', -->
+<!--                          statCd = '00003', -->
+<!--                          startDate = f$begin_date, -->
+<!--                          endDate = f$end_date) -->
+<!--     dat$month <- factor(month.abb[lubridate::month(dat$Date)], levels = month.abb) -->
+<!--     dat$year <- lubridate::year(dat$Date) -->
+<!--     datSum <- data.frame(dat |> -->
+<!--                            dplyr::group_by(month,year) |> -->
+<!--                            dplyr::summarise_at(.vars = 4, .funs = mean)) -->
+<!--     plotly::plot_ly(data = datSum, x = ~year,y = ~X_00060_00003, color = ~month, -->
+<!--                     type = 'scatter', #line = list(shape='spline'), -->
+<!--             mode = 'lines', colors = viridis::viridis_pal(option = "D")(12)) |> -->
+<!--       plotly::layout(title = paste('Average Monthly Flow at', stringr::str_to_title(f$station_nm)), -->
+<!--              xaxis = list(linecolor = 'black',width = 0.5, mirror = TRUE, -->
+<!--                           title = ''), -->
+<!--              yaxis = list(linecolor = 'black',width = 0.5, mirror = TRUE, -->
+<!--                           title = 'Flow (cfs)',rangemode = 'tozero'), -->
+<!--              legend = list(plot_bgcolor = 'blue')) -->
+<!--   }) -->
+
+
+<!-- #     # Day of year time series: -->
+<!-- # output$doy_ts <- plotly::renderPlotly({ -->
+<!-- #   f <- gage() |> dplyr::filter(parm_cd == '00045', stat_cd == '00006') -->
+<!-- #   dat <- dataRetrieval::readNWISdv(siteNumbers = f$site_no, -->
+<!-- #                          parameterCd = '00045', -->
+<!-- #                          statCd = '00006', -->
+<!-- #                          startDate = f$begin_date, -->
+<!-- #                          endDate = f$end_date) -->
+<!-- #     dat$year <- lubridate::year(dat$Date) -->
+<!-- #     dat$doy <- as.numeric(strftime(dat$Date, format = "%j")) -->
+<!-- #     # ggplot(dat, aes(x = doy, group = factor(year), color = year)) + -->
+<!-- #     #   geom_line(aes(y = dat[,4]), size=1, alpha=0.8) + -->
+<!-- #     #   scale_color_viridis_b() + -->
+<!-- #     #   ggtitle(paste0('Mean Daily ', names(dat[4]),': ',readNWISsite(dat$site_no[1])$station_nm)) + -->
+<!-- #     #   theme_classic() + -->
+<!-- #     #   theme(legend.title = element_blank(), -->
+<!-- #     #         panel.border = element_rect(fill = NA, linewidth = 1), -->
+<!-- #     #         legend.text = element_text(size=15), -->
+<!-- #     #         axis.text = element_text(size=15), -->
+<!-- #     #         axis.title = element_text(size=15)) + -->
+<!-- #     #   xlab('Day of Year') + -->
+<!-- #     #   ylab(paste0(names(dat[4]),' (',dat$units[1],')')) -->
+<!-- #     # -->
+<!-- #     plotly::plot_ly(dat, x = ~doy, y = ~X_00045_00006, type = 'scatter', mode = 'lines', -->
+<!-- #                   line = list(color = '#76D0E1')) -->
+<!-- #   }) -->
+
+
+
+<!-- fillCol(flex = c(1,1,1,1), -->
+<!--         plotly::plotlyOutput('month_box'), -->
+<!--         plotly::plotlyOutput('month_ts')) -->
+<!--         #plotly::plotlyOutput('doy_ts')) -->
+
+
+<!-- ``` -->
+
+<!-- Stream Index  -->
+<!-- =========================================================== -->
+
+<!-- ## Column {.tabset .tabset-fade data-width="280"} -->
+
+<!-- ```{r, echo = FALSE, out.width = '28%', fig.align = 'center', fig.alt='Stream Index page under construction'} -->
+<!-- knitr::include_graphics('www/sci.png') -->
+<!-- ``` -->
+
+
+Red Tide
+===========================================================
+
+## Column {.tabset .tabset-fade data-width="280"}
+
+<!-- ### FWC Red Tide Map -->
+<!-- # ```{r, echo = FALSE, out.width = '28%', fig.align = 'center', fig.alt='Red tide page under construction'} -->
+<!-- # knitr::include_graphics('www/rtpg.png') -->
+<!-- # ``` -->
+<!-- #  -->
+<!-- # Visit the [red tide map](https://www.arcgis.com/apps/webappviewer/index.html?id=7c18e5858be14368a660bda35f4acc68){target="_blank"} for the latest counts of red tide in and around Pinellas County. -->
+<!-- #  -->
+<!-- <iframe width="98%" height="98%" src="http://myfwc.maps.arcgis.com/apps/View/index.html?appid=87162eec3eb846218cec711d16462a72"> -->
+<!-- </iframe> -->
+
+<iframe width="99%" height="98%" src="https://www.arcgis.com/apps/webappviewer/index.html?id=7c18e5858be14368a660bda35f4acc68">
+</iframe>
+
+<!-- <iframe width="100%" height="600" src="http://myfwc.maps.arcgis.com/apps/View/index.html?appid=87162eec3eb846218cec711d16462a72"> -->
+<!-- </iframe> -->
+
+
+
+
+
+
+
+
+
+<!-- Seagrass -->
+<!-- =========================================================== -->
+
+<!-- ## Column {.tabset .tabset-fade data-width="280"} -->
+
+<!-- ```{r, echo = FALSE, out.width = '28%', fig.align = 'center', fig.alt='Seagrass page under construction'} -->
+<!-- knitr::include_graphics('www/sgpg.png') -->
+<!-- ``` -->
+
+<!-- Visit the Tampa Bay Estuary Program [seagrass dashboard](https://shiny.tbep.org/seagrasstransect-dash/){target="_blank"} for information on seagrass transect data in Tampa Bay. -->
+
+
+
+Data Downloads
+===========================================================
+
+## Column {.tabset .tabset-fade data-width="280"}
+
+### Water Quality
+
+```{r}
+
+# Get data for download
+dat <- reactive({
+  return(wqIn |> 
+  dplyr::filter(Level %in% c('Surface','Bottom')) |>
+ # dplyr::mutate(TN = TKN + NOX) |>
+  tidyr::drop_na(WBID))
+
+})
+
+# Create a reactive table:
+tab <- reactive({
+  dat <- dat()
+    out <- reactable::reactable(dat,
+    defaultColDef = reactable::colDef(
+      footerStyle = list(fontWeight = "bold"),
+      format = reactable::colFormat(digits = 2, separators = FALSE),
+      resizable = TRUE
+    ),
+    filterable = TRUE,
+    defaultPageSize = 50
+    )
+  return(out)
+})
+
+# Data download:
+output$wqdata <- downloadHandler(
+  #filename = function(){'PCDEM_WQ_Data.csv'},
+  filename = function(){'PCDEM_WQ_Data.xlsx'},
+  content = function(file){
+    dat <- dat()
+    #write.csv(dat, file, quote = TRUE, row.names = FALSE)
+    openxlsx::write.xlsx(dat, file)
+  }
+)
+
+# Data download button:
+fillCol(flex = c(NA, 1),
+  shinyWidgets::downloadBttn('wqdata', 'Download Data', 
+                             style = 'simple', block = TRUE, color = 'success'),
+  reactable::renderReactable(tab())
+  )
+```
+
+<!-- ### USGS Data -->
+ 

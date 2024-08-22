@@ -1,0 +1,122 @@
+body{
+  font-family: 'system-ui';
+  font-weight: 500;
+  font-size: 16px;
+  color: #636363;
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+text {
+  fill: black !important;
+}
+
+h1,h2,h3,h4,h5 {
+  font-family: 'system-ui';
+  font-weight: 800;
+  color: #00244c
+}
+
+/* top bar color */
+.navbar {
+  background-color:#00244c;
+  border-color: black;
+  font-family: 'system-ui'; /* main tab fonts */
+  font-weight: bold;
+}
+
+.nav-tabs-custom > .nav-tabs > li.active {
+  border-top-color: #00244c;
+}
+
+.navbar-nav li a:hover, .navbar-nav > .active > a {
+  color: #fff !important;
+  background-color: #616f71 !important;
+  background-image: none !important;
+}
+
+
+/* Set font color of tabs to blue */
+.nav-tabs-custom > .nav-tabs > li > a {
+  color: black;
+  font-weight: bold;
+  font-size: 14px;
+  border-radius: 0;
+  padding: 3px 10px 5px;
+}
+
+
+/* Set font color of active tab to green */
+.nav-tabs-custom .nav-tabs > li.active > a {
+  color: darkblue;
+  font-weight: bold;
+  font-size: 14px;
+  border-radius: 0;
+  padding: 3px 10px 5px;
+} 
+
+
+
+/* water quality gauge */
+body .html-widget.gauge svg {
+  height: 150px;
+  margin-top: 40px;
+  margin-bottom: -10px;
+  overflow: visible !important;
+}
+
+
+/* Additional styling for positioning the info button on the map */
+.btn {
+    font-size: 16px;
+  font-family: 'system-ui';
+  font-weight: 600;
+  padding: 3px;
+  border-radius: 12px;
+  background-color: #00244c;
+  border-color: black;
+  color: white;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+    position: absolute;
+    top: 1px; 
+    right: 1px;
+    z-index: 1; /* Ensure it's above the map layers */
+}
+
+/* Change the color of the button when hovered */
+.btn:hover {
+  background-color: lightblue;
+}
+
+
+.leaflet-top, .leaflet-bottom {
+    z-index: unset !important;
+}
+
+.leaflet-touch .leaflet-control-layers, .leaflet-touch .leaflet-bar {
+    z-index: 2 !important;
+}
+
+
+.irs--shiny .irs-bar {
+  background-color: #00244c;
+  border-top: 1px solid #00244c;
+  border-bottom: 1px solid #00244c;
+}
+
+.irs--shiny .irs-from, .irs--shiny .irs-to, .irs--shiny .irs-single {
+  background-color: #00244c;
+}
+
+.irs-grid-text {
+  font-size: 15px;
+}
+
+.shiny-input-container label {
+  font-weight: bold;
+  color: black;
+}
+
+
