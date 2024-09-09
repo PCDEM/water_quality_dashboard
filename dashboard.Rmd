@@ -1007,8 +1007,7 @@ tab <- reactive({
 
 # Data download:
 output$wqdata <- downloadHandler(
-  #filename = function(){'PCDEM_WQ_Data.csv'},
-  filename = function(){'PCDEM_WQ_Data.xlsx'},
+  filename = function(){'Pinellas_County_Water_Quality_Data_2003_2024.xlsx'},
   content = function(file){
     dat <- dat()
     #write.csv(dat, file, quote = TRUE, row.names = FALSE)
