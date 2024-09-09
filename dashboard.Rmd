@@ -371,15 +371,14 @@ Water quality is more than just a scientific measure; it's a reflection of the h
 Tampa Bay continues to be recognized for water quality and habitat restoration efforts because of collaboration between government entities, academic research, and local stakeholder involvement. Over the last four decades, there has been a concerted effort to improve the bay's water quality through monitoring and adaptive management strategies. Although managing these environmental resources is a continual effort, the success of nutrient reduction in the bay is a testament to what can be achieved through persistent and coordinated environmental management.
 
 #### This Dashboard
-This dashboard is designed to make the Division’s (PCDEM) monitoring results accessible and summarize how the lakes, streams, and coastal waters measure up compared to past conditions and based on regulatory and management targets. Click on the tabs "Data Selection" drop down menu above to explore the different data types and learn more about our water quality and other habitat monitoring data.
+This dashboard is designed to make the Division’s (PCDEM) monitoring results accessible and summarize how the lakes, streams, and coastal waters measure up compared to past conditions and based on regulatory and management targets. Click on the "Water Quality" to start exploring the water quality data from sites throughout Pinellas County. 
+
 
 This dashboard provides several types of data for exploration, including:
 
 1) [__Water Quality__](#water-quality): Water quality data from monitoring sites throughout Pinellas County.
-<!-- 1) [__Stream Flow__](#stream-flow): USGS gage stations that monitor stream flow, water level, and precipitation. -->
-<!-- 1) [__Stream Index__](#stream-index): Stream condition index data from various streams in Pinellas County. -->
 1) [__Red Tide__](#red-tide): Current Pinellas County red tide data.
-<!-- 1) [__Seagrass__](#seagrass): Seagrass survey data from Pinellas County coastal waters (in development). -->
+1) [__Annual Report__](#annual-report): Annual report summarizing water quality and habitat monitoring data
 1) [__Data Downloads__](#data-downloads): Downloadable water quality data.
 
 The page source content can be viewed on [Github](https://github.com/PCDEM){target="_blank"}.
@@ -504,12 +503,10 @@ stratified random sampling for lakes and coastal waterways.
 <br> 
 
 #### Navigating the Map
-Use the cursor to hover over the sites on the Map tab and click any to view water
-quality data for that site. Refer the legend on the bottom left of the map which
+Use the cursor to hover over the sites on the Map tab and click to view water
+quality data for that site. Refer to the legend on the bottom left of the map which
 denotes both the type of water body and the status of monitoring activity within 
-that area. There are coastal, lake, stream, and not sampled sites, of which may
-active (current monitoring activities) or inactive (previous monitoring conducted,
-but none currently).
+that area. There are coastal, lake, stream, and sites which are not sampled, of which may be inactive (previous monitoring conducted, but none currently) or have never been sampled by PCDEM.
 
 <br>
 ```{r, fig.align = 'center', out.width = '30%', fig.alt='Map legend'}
@@ -547,18 +544,13 @@ Use this menu to zoom, pan, and download the plot as a png file.
 <br> 
 
 #### Report Card
-The Report Card tab displays as "Pass/Fail" classification for selected parameters
+The Report Card tab displays a "Pass/Fail" classification for selected parameters
 at the selected site over the period-of-record data. For more information about 
 the specific criteria used or the calculations involved, please visit out Github 
 page which can be accessed by clicking the "Source Code" button at the top of the 
 dashboard.
 
 <br> 
-
-#### Annual Report
-Click the annual report tab view and download our most recent annual water quality 
-report. This document is a detailed description of water quality sampling program
-including sampling design, methods, data analysis, and results. 
 
 
 ### BACKGROUND
@@ -778,17 +770,6 @@ rcd <- reactive({
  
 ```
 
-### Annual Report
-
-```{r}
-# Display a annual report PDF:
-fillCol(flex = c(1,0.1),
-  tags$iframe(style = "border: none; width: 100%; height: 100%;",
-              src = "2022 PCDEM Ambient Water Quality Report.pdf"))
-```
-
-
-
 
 ## Column {.tabset .tabset-fade data-width="230"}
 
@@ -933,17 +914,12 @@ observeEvent(input$active_tab, {
       fillCol(flex = c(1, rep(1,5)),
         HTML('<em>This tab is under development. The Pass/Fail status for each parameter in a watershed is provisional and needs further verification.</em>'),
           paste('\nThis water quality report card for the',stringr::str_to_title(site()),
-                'watershed is based on criteria set by FDEP with a Pass/Fail status for each parameter determined by annual threshold exceedence of 10% of samples (DO) or geometric mean (all other parameters).'),
+                'watershed is based on criteria set by FDEP with a Pass/Fail status for each parameter determined by annual threshold exceedence of 10% of samples (dissolved oxygen) or geometric mean (all other parameters).'),
         paste0(''),
         paste0(''),
         paste0(''))
     })
-  } else if(input$active_tab == 'Annual Report'){
-    output$gaugePlots <- renderUI({
-      fillCol(flex = c(1, rep(1,5)),
-          "This report is the most recent annual water quality prepared by the Pinellas County Division of Environmental Managemnet and describes sampling methodology, data trends, water quality summary statistics, and biological monitoring results. For more information about this report or to request previous years' reports, please contact Stacey Day (sday@pinellas.gov).")
-    })
-        }
+  } 
   # Need this to allow gauges to update based on clicked tab:
   renderG(FALSE)
 })
@@ -963,7 +939,6 @@ An increase in nutrient levels in the water can can promote the growth of algal 
 The Pass/Fail designation for each parameter is determined by calculating the annual geometric mean and then comparing it to the FDEP standard. If the value exceeds the FDEP standard, the site will get a 'Fail' for that parameter. If the value does not exceed the standard, the site will get a 'Pass'. Visit the FDEP Water Quality Standards [webpage](https://floridadep.gov/DEAR/Water-Quality-Standards){target="_blank"} for more information about specific water quality criteria throughout the state of Florida.
 
 
-
 Red Tide
 ===========================================================
 
@@ -975,8 +950,29 @@ Red Tide
 
 
 
+Annual Report
+===========================================================
 
-Data Downloads
+## Column {.tabset .tabset-fade data-width="250"}
+
+### BACKGROUND
+
+This report is the most recent annual water quality prepared by the Pinellas County Division of Environmental Managemnet and describes sampling methodology, data trends, water quality summary statistics, and biological monitoring results. For more information about this report or to request previous years' reports, please contact Stacey Day (sday@pinellas.gov).
+
+
+## Column {.tabset .tabset-fade data-width="640"}
+
+### Annual Water Quality Report
+
+```{r}
+# Display a annual report PDF:
+fillCol(flex = c(1,0.1),
+  tags$iframe(style = "border: none; width: 100%; height: 100%;",
+              src = "2022 PCDEM Ambient Water Quality Report.pdf"))
+```
+
+
+Data Download
 ===========================================================
 
 ## Column {.tabset .tabset-fade data-width="280"}
