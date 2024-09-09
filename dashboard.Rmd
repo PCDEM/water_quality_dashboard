@@ -6,9 +6,16 @@ output:
     social: menu
     source_code: https://github.com/PCDEM
     includes:
-      in_header: google-analytics.html
+      in_header: "google-analytics.html"
 runtime: shiny
 css: style.css
+resource_files:
+- GIS/Waterbody_IDs_(WBIDs).cpg
+- GIS/Waterbody_IDs_(WBIDs).dbf
+- GIS/Waterbody_IDs_(WBIDs).prj
+- GIS/Waterbody_IDs_(WBIDs).sbn
+- GIS/Waterbody_IDs_(WBIDs).sbx
+- GIS/Waterbody_IDs_(WBIDs).shx
 ---
 
 
@@ -106,6 +113,7 @@ leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = TRUE,
                                                  weight = 4,
                                                  opacity = 0.5))
 
+
 #'*----------------------------GENERATE MAP-----------------------------------*
 
 # Start by creating the base map with tiles and layers control options
@@ -138,21 +146,6 @@ for (type in unique(wqShp$Type)) {
     highlightOptions = leaflet::highlightOptions(color = 'white', weight = 4,
                                                  opacity = 0.5)) 
 }
-
-# # details for site status legend:
-# shapes <- c('rect', 'rect','rect')
-# symbols <- setNames(Map(
-#   f = leaflegend::makeSymbol,
-#   shape = shapes,
-#   fillColor = 'white',
-#   color = c('green','red','darkgray'),
-#   opacity = 1,
-#   fillOpacity = 0.5,
-#   height = 20,
-#   width = 20,
-#   'stroke-width' = 5), 
-#   shapes)
-
 
 # details for WBID color legend:
 Sshapes <- c('rect', 'rect','rect','rect','rect','rect')
@@ -187,18 +180,6 @@ m <- m |> leaflet::addPolygons(
   overlayGroups = c(unique(wqShp$Type)),
   options = leaflet::layersControlOptions(collapsed = TRUE)) |>
   leaflet::addScaleBar(position = 'bottomleft') |>
-  # leaflegend::addLegendImage(
-  #  images = symbols,
-  #   labels = c('Active', 'Inactive','Not Sampled'),
-  #   labelStyle = "font-size: 14px;",
-  #   width = 15,
-  #   height = 13,
-  #   orientation = 'vertical',
-  #   title = htmltools::tags$div('Site Status',
-  #                               style = 'font-size: 15px; text-align: center;
-  #                               font-weight: bold;'),
-  #   position = 'bottomright'
-  # ) |>
   leaflegend::addLegendImage(
     images = Ssymbols,
     labels = c('Coastal-Active','Coastal-Inactive','Lake','Stream-Active', 'Stream-Inactive',
@@ -211,6 +192,7 @@ m <- m |> leaflet::addPolygons(
                                 style = 'font-size: 15px; text-align: center;
                                 font-weight: bold;'),
     position = 'bottomleft')
+
 
 #'*---------------------------GATHER DATA---------------------------*
 
@@ -697,49 +679,6 @@ observe({
 })
 
 
-# med <- purrr::partial(median, na.rm = TRUE)
-# sdv <- purrr::partial(sd, na.rm = TRUE)
-# minN <- purrr::partial(min, na.rm = TRUE)
-# maxN <- purrr::partial(max, na.rm = TRUE)
-# 
-# sumStats <- reactive({
-#   
-#   x <- data.frame(wqM |>
-#   dplyr::filter(WBID == 1440))
-#   
-#   # Make a table of summary statistics for each parameter (DO, chl_a, TN,TP,TSS,Turbidity,
-# # Secchi, Temp, Salinity, Ecoli, and Entero) and put it in a table:
-# p <- x |>
-#   dplyr::select(DO, chl=chl_a, TN, TP, TSS, Turbidity, Secchi, Temp, Salinity, Ecoli, Entero) |>
-#   dplyr::summarise(
-#     dplyr::across(
-#       dplyr::everything(), list(n = ~sum(!is.na(.)),`Min.`=minN,`Max.` = maxN,
-#                                 mean = mean_n, 
-#                                 geom = psych::geometric.mean,
-#                                       median = med, stddev = sdv))) |>
-#   round(2) |>
-#   tidyr::pivot_longer(cols = everything(), names_to = "key", values_to = "value") %>%
-#   tidyr::separate(key, into = c("param", "stat"), sep = "_") %>%
-#   tidyr::pivot_wider(names_from = "stat", values_from = "value") |>
-#   dplyr::rename(Parameter = param, Mean = mean, `Geometric Mean` = geom,
-#          Median = median, `Std. Deviation` = stddev)
-# 
-# plotly::plot_ly() |>
-#   plotly::add_trace(type = "table",
-#             header = list(values = c("Parameter", "n","Min.","Max.","Mean", "Geometric Mean",
-#                                      "Median","Std. Deviation"),
-#                           align = c("center", "center"),
-#                           fill = list(color = "#BCBCBC")),
-#             cells = list(values = list(p$Parameter,p$n,p$Min.,p$Max.,p$Mean, p$`Geometric Mean`, 
-#                                        p$Median, p$`Std. Deviation`),
-#                          align = c("center", "center"),
-#                          fill = list(color = "white", color = c("grey")),
-#                          height=20,
-#                          font = list(size=12)))
-# })
-
-
-
 
 # WBID specific pass/fail summary:
 rcd <- reactive({
@@ -1025,379 +964,15 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 
 
 
-<!-- Stream Flow -->
-<!-- =========================================================== -->
-
-<!-- ## Column {.tabset .tabset-fade data-width="280"} -->
-
-<!-- ```{r USGS, include=FALSE} -->
-
-<!-- # USGS stream gage sites in Pinellas County: -->
-<!-- sites <- c('02307323','02307359','02307359','02307362','02307445','02309447', -->
-<!--            '02307496','02307498','02309425','02309421','02309415','02307668', -->
-<!--            '02307669','02307674','02309200','02309110','02307780','02308859', -->
-<!--            '02308861','02308870','02308889','02308950','02310075') -->
-
-<!-- # Parameters to retrieve from USGS: -->
-<!-- # 00045 = Total Precipitation (in) -->
-<!-- # 00060 = Stream Flow (ft^3/s) -->
-<!-- # 00065 = Gage height (ft) -->
-<!-- codes <- c('00045', '00060', '00065') -->
-
-<!-- # Get info on data available at each site: -->
-<!-- Udat <- dataRetrieval::whatNWISdata(siteNumber = sites) |> -->
-<!--   dplyr::filter(data_type_cd != 'qw', parm_cd %in% codes) -->
-
-
-
-
-
-
-<!-- # -->
-<!-- # # Retrieve data from USGS NWIS: -->
-<!-- # Usite <- function(data,param,stat){ -->
-<!-- #   f <- data |> dplyr::filter(parm_cd == param, stat_cd == stat) -->
-<!-- #   g <- dataRetrieval::readNWISdv(siteNumbers = f$site_no, -->
-<!-- #                                  parameterCd = param, -->
-<!-- #                                  statCd = stat, -->
-<!-- #                                  startDate = f$begin_date, -->
-<!-- #                                  endDate = f$end_date) -->
-<!-- #   View(g) -->
-<!-- #   return(list(g=g,f=f)) -->
-<!-- # } -->
-<!-- # -->
-<!-- # t <- Udat |> -->
-<!-- #   dplyr::filter(site_no == '02307498') -->
-<!-- # -->
-<!-- # -->
-<!-- # Usite(t, '00065','00003') -->
-
-
-
-
-<!-- Uinit <- '02309425' -->
-
-<!-- # Start by creating the base map with tiles and layers control options -->
-<!-- Um <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = TRUE, -->
-<!--                   zoomSnap = 0.1, zoomDelta = 1, attributionControl = FALSE)) |> -->
-<!--   leaflet::addTiles() |> -->
-<!--   leaflet::addProviderTiles(leaflet::providers$Esri.WorldImagery, group = 'Esri.WorldImagery') |> -->
-<!--   leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron, group = 'CartoDB.Positron') |> -->
-<!--   leaflet::addProviderTiles(leaflet::providers$CartoDB.DarkMatter, group = 'CartoDB.DarkMatter') |> -->
-
-<!--   leaflet::addProviderTiles(leaflet::providers$Esri.WorldTopoMap, group = 'Esri.WorldTopoMap') |> -->
-<!--   leaflet::addProviderTiles(leaflet::providers$OpenTopoMap, group = 'OpenTopoMap') |> -->
-<!--   leaflet::setView(lng = -82.72, lat = 27.905, zoom = 10.6) |> -->
-<!--   leaflet::addCircleMarkers( -->
-<!--     data = Udat, -->
-<!--     lng = ~dec_long_va, -->
-<!--     lat = ~dec_lat_va, -->
-<!--     radius = 6, -->
-<!--    color = "black", -->
-<!--    fill = TRUE, -->
-<!--    fillColor = 'lightblue', -->
-<!--    weight = 2, -->
-<!--    stroke = TRUE, -->
-<!--    fillOpacity = 0.5, -->
-<!--    label = ~station_nm) |> -->
-<!--   leaflet::addCircleMarkers( -->
-<!--     data = Udat[Udat$site_no == Uinit, ], -->
-<!--     lng = ~dec_long_va, -->
-<!--     lat = ~dec_lat_va, -->
-<!--     layerId = 's', -->
-<!--     stroke = TRUE, -->
-<!--     color = 'black', -->
-<!--     fill = TRUE, -->
-<!--     fillColor = 'red', -->
-<!--     weight = 2, -->
-<!--     fillOpacity = 1, -->
-<!--     radius= 6) |> -->
-<!--   leaflet::addLayersControl( -->
-<!--   position = "topleft", -->
-<!--   baseGroups = c("Esri.WorldImagery","CartoDB.Positron", "CartoDB.DarkMatter", -->
-<!--                  "Esri.WorldTopoMap", "OpenTopoMap")) -->
-
-<!-- ``` -->
-
-<!-- ### Stream Gage Map -->
-
-<!-- ```{r} -->
-
-<!-- Uplo <- leaflet::leafletProxy('Uplo') -->
-
-
-<!-- observeEvent(input$Uplo_marker_click, { -->
-<!--     siteLoc <- Udat %>% dplyr::filter(dec_lat_va == input$Uplo_marker_click$lat & -->
-<!--                        dec_long_va == input$Uplo_marker_click$lng) -->
-<!--   Uplo <- Uplo %>% -->
-<!--     leaflet::removeMarker('s') %>% -->
-<!--     leaflet::addCircleMarkers( -->
-<!--       data = siteLoc, -->
-<!--       lng = ~dec_long_va, -->
-<!--       lat = ~dec_lat_va, -->
-<!--       layerId = 's', -->
-<!--       stroke = TRUE, -->
-<!--       color = 'black', -->
-<!--       fill = TRUE, -->
-<!--       fillColor = 'red', -->
-<!--       weight = 2, -->
-<!--       fillOpacity = 1, -->
-<!--       radius = 6 -->
-<!--     ) -->
-<!-- }) -->
-
-<!-- output$Uplo <- leaflet::renderLeaflet(Um) -->
-<!-- leaflet::leafletOutput('Uplo') -->
-
-<!-- ``` -->
-
-
-
-<!-- ## Column {.tabset .tabset-fade data-width="840"} -->
-
-<!-- ### Discharge, Gage Height, & Precipitation -->
-
-<!-- ```{r} -->
-
-<!-- # Get available USGS data for selected site: -->
-<!-- gage <- reactive({ -->
-<!--   if (is.null(input$Uplo_marker_click)){ -->
-<!--     getDat <- Udat |> -->
-<!--       dplyr::filter(site_no == Uinit) -->
-<!--     } else { -->
-<!--     getDat <- Udat |> -->
-<!--       dplyr::filter(dec_lat_va == input$Uplo_marker_click$lat & -->
-<!--              dec_long_va == input$Uplo_marker_click$lng) -->
-<!--     } -->
-<!--    return(getDat) -->
-<!-- }) -->
-
-
-<!-- # Plot for stream flow: -->
-<!-- output$flow <- plotly::renderPlotly({ -->
-<!--   g <- Usite(gage,'00060','00003') -->
-<!--   Uplt(data = g$g, stnm = g$f$station_nm, title = 'Daily Streamflow', -->
-<!--        yax = 'Discharge (cubic feet per second)') -->
-<!-- }) -->
-
-<!-- # flow <- reactive({ -->
-<!-- #   g <- Usite(gage,'00060','00003') -->
-<!-- #   return(Uplt(data = g$g, stnm = g$f$station_nm, title = 'Daily Streamflow', -->
-<!-- #        yax = 'Discharge (cubic feet per second)')) -->
-<!-- # }) -->
-
-<!-- # Plot for gage height: -->
-<!-- output$gh <- plotly::renderPlotly({ -->
-<!--   g <- Usite(gage,'00065','00003') -->
-<!--   Uplt(data = g$g, stnm = g$f$station_nm, title = 'Daily Gage Height', -->
-<!--        yax = 'Gage Height (ft)') -->
-<!-- }) -->
-
-<!-- # Plot for precipitation: -->
-<!-- output$rain <- plotly::renderPlotly({ -->
-<!--   g <- Usite(gage,'00045','00006') -->
-<!--   Uplt(data = g$g, stnm = g$f$station_nm, title = 'Daily Precipitation', -->
-<!--        yax = 'Precipitation (in)') -->
-<!-- }) -->
-
-<!-- # Render plots: -->
-<!-- fillCol(flex = c(1,rep(1,3)), -->
-<!--         plotly::plotlyOutput('flow'), -->
-<!--         #pltmsg(flow,'X_00060_00003',flow()), -->
-<!--         plotly::plotlyOutput('gh'), -->
-<!--         plotly::plotlyOutput('rain')) -->
-
-<!-- ``` -->
-
-
-<!-- ### Flow Regime -->
-
-<!-- ```{r} -->
-<!--   # Generate 3D time-series: -->
-<!--   output$ts_3d <- plotly::renderPlotly({ -->
-
-<!--    f <- gage() |> dplyr::filter(parm_cd == '00060', stat_cd == '00003') -->
-<!--    g <- dataRetrieval::readNWISdv(siteNumbers = f$site_no, -->
-<!--                          parameterCd = '00060', -->
-<!--                          statCd = '00003', -->
-<!--                          startDate = f$begin_date, -->
-<!--                          endDate = f$end_date) -->
-
-<!--     FlowMatrix       <- data.frame(Day = lubridate::yday(g$Date), -->
-<!--                                    Year = lubridate::year(g$Date), -->
-<!--                                    Var = g[,4]) -->
-<!--     varMat           <- raster::as.matrix(raster::rasterFromXYZ(FlowMatrix)) -->
-<!--     shiny::validate(need(sum(is.na(varMat))/length(varMat) < 0.80, 'Error: Not enough data to generate plot.')) -->
-<!--     rownames(varMat) <- rev(seq(min(FlowMatrix$Year), max(FlowMatrix$Year), 1)) -->
-<!--     y                <- as.numeric(rownames(varMat)) -->
-<!--     tckNum           <- round(seq(1, 366, by = 30.5)) -->
-<!--     tckMo            <- month.abb[lubridate::parse_date_time(tckNum, orders = "j") |> -->
-<!--                                     lubridate::month()] -->
-
-<!--     legTitle <- 'Flow (cfs)' -->
-
-<!--     plotly::plot_ly(height = 900) |> -->
-<!--       plotly::add_surface(z = varMat, -->
-<!--                   y = y, -->
-<!--                   colorbar = list(title = legTitle), -->
-<!--                   colorscale = list(thresholds_colors = seq(0, 1, length = 6), -->
-<!--                                     colors = c('gray', 'blue', 'skyblue', 'green', 'yellow', 'red')), -->
-<!--                   showscale = TRUE) |> -->
-<!--       plotly::layout(title = list(text = dataRetrieval::readNWISsite(g$site_no)$station_nm,x = 0.47, y = 0.92), -->
-<!--              scene=list( -->
-<!--                yaxis = list(title = 'Year', dtick = ifelse(length(unique(FlowMatrix$Year)) <= 10,2,5)), -->
-<!--                zaxis = list(title = legTitle), -->
-<!--                xaxis = list(title = 'Month', autorange = "reversed", -->
-<!--                             tickvals = seq(1, 366, by = 30.5), -->
-<!--                             ticktext = tckMo), -->
-<!--                camera = list(eye = list(x = 1.3, y = 1.3, z = 1.8)))) -->
-<!--   }) -->
-
-<!-- plotly::plotlyOutput('ts_3d') -->
-
-
-<!-- ``` -->
-
-<!-- ### Data Distribution -->
-
-<!-- ```{r} -->
-
-
-<!-- radioButtons('type','Select data type',choices=c('Flow','Gage Height','Precipitation'), -->
-<!--              selected='Flow',inline=TRUE,width='95%') -->
-
-
-<!--   # Monthly boxplots: -->
-<!--   output$month_box <- plotly::renderPlotly({ -->
-<!--       f <- gage() |> dplyr::filter(parm_cd == '00060', stat_cd == '00003') -->
-<!--       dat <- dataRetrieval::readNWISdv(siteNumbers = f$site_no, -->
-<!--                          parameterCd = '00060', -->
-<!--                          statCd = '00003', -->
-<!--                          startDate = f$begin_date, -->
-<!--                          endDate = f$end_date) -->
-<!--     dat$Month <- factor(month.abb[lubridate::month(dat$Date)], levels = month.abb) -->
-<!--     plotly::plot_ly(data = dat, x = ~Month, y = ~X_00060_00003, type = 'box', -->
-<!--             marker = list(color = '#4ABBE6'), -->
-<!--             line = list(color = '#B2B2B2')) |> -->
-<!--       plotly::layout(title = paste('Monthly Distribution of Flow at', -->
-<!--                                    stringr::str_to_title(f$station_nm)), -->
-<!--              xaxis = list(linecolor = 'black',width = 0.5, mirror = TRUE, -->
-<!--                           title = ''), -->
-<!--              yaxis = list(linecolor = 'black',width = 0.5, mirror = TRUE, -->
-<!--                           title = 'Flow (cfs)',rangemode = 'tozero')) -->
-<!--   }) -->
-
-<!--   # Month time series: -->
-<!--   output$month_ts <- plotly::renderPlotly({ -->
-<!--       f <- gage() |> dplyr::filter(parm_cd == '00060', stat_cd == '00003') -->
-<!--       dat <- dataRetrieval::readNWISdv(siteNumbers = f$site_no, -->
-<!--                          parameterCd = '00060', -->
-<!--                          statCd = '00003', -->
-<!--                          startDate = f$begin_date, -->
-<!--                          endDate = f$end_date) -->
-<!--     dat$month <- factor(month.abb[lubridate::month(dat$Date)], levels = month.abb) -->
-<!--     dat$year <- lubridate::year(dat$Date) -->
-<!--     datSum <- data.frame(dat |> -->
-<!--                            dplyr::group_by(month,year) |> -->
-<!--                            dplyr::summarise_at(.vars = 4, .funs = mean)) -->
-<!--     plotly::plot_ly(data = datSum, x = ~year,y = ~X_00060_00003, color = ~month, -->
-<!--                     type = 'scatter', #line = list(shape='spline'), -->
-<!--             mode = 'lines', colors = viridis::viridis_pal(option = "D")(12)) |> -->
-<!--       plotly::layout(title = paste('Average Monthly Flow at', stringr::str_to_title(f$station_nm)), -->
-<!--              xaxis = list(linecolor = 'black',width = 0.5, mirror = TRUE, -->
-<!--                           title = ''), -->
-<!--              yaxis = list(linecolor = 'black',width = 0.5, mirror = TRUE, -->
-<!--                           title = 'Flow (cfs)',rangemode = 'tozero'), -->
-<!--              legend = list(plot_bgcolor = 'blue')) -->
-<!--   }) -->
-
-
-<!-- #     # Day of year time series: -->
-<!-- # output$doy_ts <- plotly::renderPlotly({ -->
-<!-- #   f <- gage() |> dplyr::filter(parm_cd == '00045', stat_cd == '00006') -->
-<!-- #   dat <- dataRetrieval::readNWISdv(siteNumbers = f$site_no, -->
-<!-- #                          parameterCd = '00045', -->
-<!-- #                          statCd = '00006', -->
-<!-- #                          startDate = f$begin_date, -->
-<!-- #                          endDate = f$end_date) -->
-<!-- #     dat$year <- lubridate::year(dat$Date) -->
-<!-- #     dat$doy <- as.numeric(strftime(dat$Date, format = "%j")) -->
-<!-- #     # ggplot(dat, aes(x = doy, group = factor(year), color = year)) + -->
-<!-- #     #   geom_line(aes(y = dat[,4]), size=1, alpha=0.8) + -->
-<!-- #     #   scale_color_viridis_b() + -->
-<!-- #     #   ggtitle(paste0('Mean Daily ', names(dat[4]),': ',readNWISsite(dat$site_no[1])$station_nm)) + -->
-<!-- #     #   theme_classic() + -->
-<!-- #     #   theme(legend.title = element_blank(), -->
-<!-- #     #         panel.border = element_rect(fill = NA, linewidth = 1), -->
-<!-- #     #         legend.text = element_text(size=15), -->
-<!-- #     #         axis.text = element_text(size=15), -->
-<!-- #     #         axis.title = element_text(size=15)) + -->
-<!-- #     #   xlab('Day of Year') + -->
-<!-- #     #   ylab(paste0(names(dat[4]),' (',dat$units[1],')')) -->
-<!-- #     # -->
-<!-- #     plotly::plot_ly(dat, x = ~doy, y = ~X_00045_00006, type = 'scatter', mode = 'lines', -->
-<!-- #                   line = list(color = '#76D0E1')) -->
-<!-- #   }) -->
-
-
-
-<!-- fillCol(flex = c(1,1,1,1), -->
-<!--         plotly::plotlyOutput('month_box'), -->
-<!--         plotly::plotlyOutput('month_ts')) -->
-<!--         #plotly::plotlyOutput('doy_ts')) -->
-
-
-<!-- ``` -->
-
-<!-- Stream Index  -->
-<!-- =========================================================== -->
-
-<!-- ## Column {.tabset .tabset-fade data-width="280"} -->
-
-<!-- ```{r, echo = FALSE, out.width = '28%', fig.align = 'center', fig.alt='Stream Index page under construction'} -->
-<!-- knitr::include_graphics('www/sci.png') -->
-<!-- ``` -->
-
-
 Red Tide
 ===========================================================
 
 ## Column {.tabset .tabset-fade data-width="280"}
 
-<!-- ### FWC Red Tide Map -->
-<!-- # ```{r, echo = FALSE, out.width = '28%', fig.align = 'center', fig.alt='Red tide page under construction'} -->
-<!-- # knitr::include_graphics('www/rtpg.png') -->
-<!-- # ``` -->
-<!-- #  -->
-<!-- # Visit the [red tide map](https://www.arcgis.com/apps/webappviewer/index.html?id=7c18e5858be14368a660bda35f4acc68){target="_blank"} for the latest counts of red tide in and around Pinellas County. -->
-<!-- #  -->
-<!-- <iframe width="98%" height="98%" src="http://myfwc.maps.arcgis.com/apps/View/index.html?appid=87162eec3eb846218cec711d16462a72"> -->
-<!-- </iframe> -->
 
 <iframe width="99%" height="98%" src="https://www.arcgis.com/apps/webappviewer/index.html?id=7c18e5858be14368a660bda35f4acc68">
 </iframe>
 
-<!-- <iframe width="100%" height="600" src="http://myfwc.maps.arcgis.com/apps/View/index.html?appid=87162eec3eb846218cec711d16462a72"> -->
-<!-- </iframe> -->
-
-
-
-
-
-
-
-
-
-<!-- Seagrass -->
-<!-- =========================================================== -->
-
-<!-- ## Column {.tabset .tabset-fade data-width="280"} -->
-
-<!-- ```{r, echo = FALSE, out.width = '28%', fig.align = 'center', fig.alt='Seagrass page under construction'} -->
-<!-- knitr::include_graphics('www/sgpg.png') -->
-<!-- ``` -->
-
-<!-- Visit the Tampa Bay Estuary Program [seagrass dashboard](https://shiny.tbep.org/seagrasstransect-dash/){target="_blank"} for information on seagrass transect data in Tampa Bay. -->
 
 
 
@@ -1453,5 +1028,4 @@ fillCol(flex = c(NA, 1),
   )
 ```
 
-<!-- ### USGS Data -->
- 
+
