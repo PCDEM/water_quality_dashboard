@@ -744,28 +744,5 @@ pltmsg <- function(dataFunc, colName, plotFunc) {
   })
 }
 
-# Retrieve data from USGS NWIS:
-Usite <- function(data,param,stat){
-  f <- data() |> dplyr::filter(parm_cd == param, stat_cd == stat)
-  g <- dataRetrieval::readNWISdv(siteNumbers = f$site_no,
-                                 parameterCd = param,
-                                 statCd = stat,
-                                 startDate = f$begin_date,
-                                 endDate = f$end_date)
-  return(list(g=g,f=f))
-}
-
-# Function to create a plotly plot
-Uplt <- function(data, stnm,var, title, yax){
-  plotly::plot_ly(data, x = ~Date, y = ~data[,4], type = 'scatter', mode = 'lines',
-                  line = list(color = '#76D0E1')) |>
-    plotly::layout(title = paste(title,'at', stringr::str_to_title(stnm)),
-                   xaxis = list(linecolor = 'black',width = 0.5, mirror = TRUE,
-                                title = ''),
-                   yaxis = list(linecolor = 'black',width = 0.5, mirror = TRUE,
-                                title = yax,rangemode = 'tozero'))
-}
-      
-      
       
       
