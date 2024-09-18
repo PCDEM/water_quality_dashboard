@@ -39,7 +39,8 @@ source('R/funcs.R')
 #'*---------------------------TIDY DATA---------------------------*
 
 # Import water quality data:
-wqIn <- readxl::read_excel("Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx", guess_max = 50000)
+wqIn <- readxl::read_excel("Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx", 
+                           guess_max = 50000)
 
 # Import FDEP WBID water quality thresholds (some of the WBID names may not exactly
 # match FDEP WBID names due to Pinellas County monitoring program specifics. For 
@@ -137,7 +138,6 @@ for (type in unique(wqShp$Type)) {
     weight = 0.8,
     fillOpacity = 0.3,
     stroke = TRUE,
-    # color = ~statColor,
     color = 'black',
     opacity = 0.7,
     fill = TRUE,
@@ -408,9 +408,9 @@ firstClick <- reactiveVal(TRUE)
 # UI for the initial informational popup:
 txt <- modalDialog(
   title = "NAVIGATING THE WATER QUALITY DATA PAGE",
-  HTML("<em>NOTE: This dashboard is still under development and some features may not be fully functional or respond as expected. Please report any issues to almanos@pinellas.gov.</em>"),
-  tags$p(""),
-  br(),
+  # HTML("<em>NOTE: This dashboard is still under development and some features may not be fully functional or respond as expected. Please report any issues to almanos@pinellas.gov.</em>"),
+  # tags$p(""),
+  # br(),
   HTML("<b>Getting started:</b>"),
   tags$p(""),
   tags$li("Click 'MAP' to view our sampled watersheds."),
@@ -428,16 +428,15 @@ txt <- modalDialog(
   tags$li("The plots are interactive; use the cursor to highlight data points."),
   tags$p(""),
   tags$li("Click through the tabs to view different water quality parameters."),
-  br(),
-  HTML("<b>Downloading the data:</b>"),
-  tags$p(""),
-  tags$li("Click the 'Data Downloads' tab at the top of the page to view raw data."),
-  tags$p(""),
-  # tags$li("Click the 'Water Quality' tab to view and search the raw data."),
+  # br(),
+  # HTML("<b>Downloading the data:</b>"),
   # tags$p(""),
-  tags$li("Click the 'Download Data' button to download a copy of the data."),
+  # tags$li("Click the 'Data Downloads' tab at the top of the page to view raw data."),
+  # tags$p(""),
+  # tags$li("Click the 'Download Data' button to download a copy of the data."),
   easyClose = TRUE,
-  footer = NULL
+  footer = modalButton("Close"),
+  style = "font-size:90%"
 )
 
 # Make sure initial info popup only displayed once and not again after subtab click:
@@ -942,10 +941,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 Red Tide
 ===========================================================
 
-## Column {.tabset .tabset-fade data-width="280"}
-
-
-<iframe width="99%" height="98%" src="https://www.arcgis.com/apps/webappviewer/index.html?id=7c18e5858be14368a660bda35f4acc68">
+<iframe width="100%" height="100%" src="https://www.arcgis.com/apps/webappviewer/index.html?id=7c18e5858be14368a660bda35f4acc68">
 </iframe>
 
 
@@ -1022,5 +1018,3 @@ fillCol(flex = c(NA, 1),
   reactable::renderReactable(tab())
   )
 ```
-
-

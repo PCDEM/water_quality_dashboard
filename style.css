@@ -79,10 +79,10 @@ body .html-widget.gauge svg {
   display: block;
   margin-left: auto;
   margin-right: auto;
-    position: absolute;
-    top: 1px; 
-    right: 1px;
-    z-index: 1; /* Ensure it's above the map layers */
+  position: absolute;
+  top: 1px; 
+  right: 1px;
+  z-index: 1; /* Ensure it's above the map layers */
 }
 
 /* Change the color of the button when hovered */
@@ -119,4 +119,25 @@ body .html-widget.gauge svg {
   color: black;
 }
 
+
+
+
+.modal-footer {
+  position: relative; /* Ensure the footer itself is positioned */
+}
+
+.modal-footer .btn {
+  position: absolute;
+  bottom: 10px;  /* Distance from the bottom of the modal footer */
+  right: 10px;   /* Distance from the right side of the modal footer */
+  background-color: #f44336; /* Optional: button color */
+  color: white;
+  border: none;
+  padding: 3px 6px;
+  border-radius: 48px;
+}
+
+.modal-footer .btn:hover {
+  background-color: #d32f2f; /* Optional: hover effect */
+}
 
