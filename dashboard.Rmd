@@ -408,9 +408,6 @@ firstClick <- reactiveVal(TRUE)
 # UI for the initial informational popup:
 txt <- modalDialog(
   title = "NAVIGATING THE WATER QUALITY DATA PAGE",
-  # HTML("<em>NOTE: This dashboard is still under development and some features may not be fully functional or respond as expected. Please report any issues to almanos@pinellas.gov.</em>"),
-  # tags$p(""),
-  # br(),
   HTML("<b>Getting started:</b>"),
   tags$p(""),
   tags$li("Click 'MAP' to view our sampled watersheds."),
@@ -428,12 +425,6 @@ txt <- modalDialog(
   tags$li("The plots are interactive; use the cursor to highlight data points."),
   tags$p(""),
   tags$li("Click through the tabs to view different water quality parameters."),
-  # br(),
-  # HTML("<b>Downloading the data:</b>"),
-  # tags$p(""),
-  # tags$li("Click the 'Data Downloads' tab at the top of the page to view raw data."),
-  # tags$p(""),
-  # tags$li("Click the 'Download Data' button to download a copy of the data."),
   easyClose = TRUE,
   footer = modalButton("Close"),
   style = "font-size:90%"
