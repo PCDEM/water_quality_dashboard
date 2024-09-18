@@ -679,13 +679,15 @@ plt <- function(data, var,crit = 0){
 }
 
 # Function to create a gauge plot:
-gauge <- function(data,var,unit,max,round,g1,g2,r1,r2,fs){
+gauge <- function(data,var,unit,max,round,g1,g2,r1,r2,fs,width){
   chart <- highcharter::highchart() |>
     highcharter::hc_chart(type = "gauge") |>
     highcharter::hc_title(
       text = HTML('<b>',paste0(var,' (',
                                format(data[,1][max(which(!is.na(data[,2])))], 
-                                      '%b %Y'),')')), margin = -15) |>
+                                      '%b %Y'),')')), 
+      style = list(fontSize = paste0(width*0.01, "px")),
+      margin = -15) |>
     highcharter::hc_pane(
       startAngle = -110,
       endAngle = 110) |>

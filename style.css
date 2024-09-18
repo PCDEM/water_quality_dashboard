@@ -68,7 +68,7 @@ body .html-widget.gauge svg {
 
 /* Additional styling for positioning the info button on the map */
 .btn {
-    font-size: 16px;
+  font-size: 16px;
   font-family: 'system-ui';
   font-weight: 600;
   padding: 3px;

@@ -465,7 +465,8 @@ output$info <- renderUI({
   tags$div(id="info-btn-container",
            actionButton("info", 
                         label = HTML(paste0("<i class='fas fa-info-circle'></i> ", 
-                                            site())), class = "btn"))
+                                            site())),
+                        style=paste0('font-size:',input$screen_width/115,'px'), class = "btn"))
 })
 
 # output map and info button:
@@ -731,10 +732,14 @@ rcd <- reactive({
   rc <- dplyr::bind_cols(do, nubact) |>
     dplyr::select(Year = 'Year...1',`Chlorophyll-a` = chl_grade, 
                   `Dissolved Oxygen` = do_grade, `Total Phosphorus` = tp_grade,
-                  `Total Nitrogen` = tn_grade, `E. coli` = ecoli_grade, Enterococci = entero_grade) |>
+                  `Total Nitrogen` = tn_grade, `E. coli` = ecoli_grade,
+                  Enterococci = entero_grade) |>
     dplyr::select_if(~!all(is.na(.))) |>
     dplyr::mutate(across(everything(), ~replace(., is.na(.), ''))) |>
     dplyr::filter(Year >= input$year[1] & Year <= input$year[2])
+  
+  title <- paste('Water Quality Report Card for', 
+                                             stringr::str_to_title(site()), 'Watershed')
 
   # Create the table:
   plotly::plot_ly(
@@ -744,33 +749,40 @@ rcd <- reactive({
     line = list(color = 'white'),
     fill = list(color = '#BCBCBC'),
     align = 'center',
-    font = list(color = 'white', size = 13),
-    height = 25,
-    width = 20),
+    font = list(color = 'white', size = 11),
+    height = 20,
+    width = 25),
   cells = list(
     values = rbind(rc$Year, rc$`Chlorophyll-a`, rc$`Dissolved Oxygen`, 
-                   rc$`Total Phosphorus`, rc$`Total Nitrogen`, rc$`E. coli`, rc$Enterococci),
+                   rc$`Total Phosphorus`, rc$`Total Nitrogen`, rc$`E. coli`,
+                   rc$Enterococci),
     line = list(color = 'black'),
     fill = list(color = rbind(
       rep('white', length(rc$Year)),
-      ifelse(rc$`Chlorophyll-a` == "Pass", "#c6e0b4", ifelse(rc$`Chlorophyll-a` == "Fail", "#f4b084", "white")),
-      ifelse(rc$`Dissolved Oxygen` == "Pass", "#c6e0b4", ifelse(rc$`Dissolved Oxygen` == "Fail", "#f4b084", "white")),
-      ifelse(rc$`Total Phosphorus` == "Pass", "#c6e0b4", ifelse(rc$`Total Phosphorus` == "Fail", "#f4b084", "white")),
-      ifelse(rc$`Total Nitrogen` == "Pass", "#c6e0b4", ifelse(rc$`Total Nitrogen` == "Fail", "#f4b084", "white")),
-      ifelse(rc$`E. coli` == "Pass", "#c6e0b4", ifelse(rc$`E. coli` == "Fail", "#f4b084", "white")),
-      ifelse(rc$Enterococci == "Pass", "#c6e0b4", ifelse(rc$Enterococci == "Fail", "#f4b084", "white")))),
+      ifelse(rc$`Chlorophyll-a` == "Pass", "#c6e0b4", 
+             ifelse(rc$`Chlorophyll-a` == "Fail", "#f4b084", "white")),
+      ifelse(rc$`Dissolved Oxygen` == "Pass", "#c6e0b4", 
+             ifelse(rc$`Dissolved Oxygen` == "Fail", "#f4b084", "white")),
+      ifelse(rc$`Total Phosphorus` == "Pass", "#c6e0b4", 
+             ifelse(rc$`Total Phosphorus` == "Fail", "#f4b084", "white")),
+      ifelse(rc$`Total Nitrogen` == "Pass", "#c6e0b4", 
+             ifelse(rc$`Total Nitrogen` == "Fail", "#f4b084", "white")),
+      ifelse(rc$`E. coli` == "Pass", "#c6e0b4", 
+             ifelse(rc$`E. coli` == "Fail", "#f4b084", "white")),
+      ifelse(rc$Enterococci == "Pass", "#c6e0b4", 
+             ifelse(rc$Enterococci == "Fail", "#f4b084", "white")))),
     align = 'center',
-    font = list(color = 'black', size = 13),
-    height = 25)) |>
-    plotly::layout(title = list(text = paste('Water Quality Report Card for', 
-                                             stringr::str_to_title(site()), 'Watershed'),
-             font = list(size = 20)),
-             margin = list(t = 30))
+    font = list(color = 'black', size = 11),
+    height = 21)) |>
+    plotly::layout(
+      title = list(text = title,
+                   font = list(size = 120/sqrt(nchar(title))),
+                   y = 0.985)
+      )
 })
 
  # display table
- fillCol(flex = c(1,1,1),
-     #  plotly::renderPlotly(sumStats()),
+ fillCol(flex = 1,
        plotly::renderPlotly(rcd()))
  
 ```
@@ -789,6 +801,20 @@ $(document).on('shown.bs.tab', 'a[data-toggle=\"tab\"]', function (e) {
 });
 ")
 
+# Get screen size
+tags$script("
+  $(document).on('shiny:connected', function() {
+    var screenWidth = $(window).width();
+    Shiny.onInputChange('screen_width', screenWidth);
+  });
+
+  $(window).resize(function() {
+    var screenWidth = $(window).width();
+    Shiny.onInputChange('screen_width', screenWidth);
+  });
+")
+
+
 
 # Gauge plot colors:
 cls = c('green','yellow','red')
@@ -797,7 +823,7 @@ cls = c('green','yellow','red')
 output$DOg <- highcharter::renderHighchart({
   gauge(data = dplyr::select(getData(), Date, DO), var = 'Dissolved Oxygen',unit='%',
         max= 100, g1 = wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        round = 1,
+        round = 1, width = input$screen_width,
         g2=100,r1=0,r2=wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]])
 })  
 
@@ -805,7 +831,7 @@ output$DOg <- highcharter::renderHighchart({
 output$chlg <- highcharter::renderHighchart({
   gauge(data = dplyr::select(getData(), Date, chl_a), var = 'Chlorophyll-a',unit=' µg/L',
         max = 40,g1=0,g2=wCrit$chla_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        round=1,
+        round=1, width = input$screen_width,
         r1=wCrit$chla_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
         r2=40)
 })
@@ -814,7 +840,7 @@ output$chlg <- highcharter::renderHighchart({
 output$TNg <- highcharter::renderHighchart({
   gauge(data = dplyr::select(getData(), Date, TN), var = 'Total Nitrogen',unit=' mg/L',
         max = 3,g1=0,g2=wCrit$TN_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        round=2,
+        round=2, width = input$screen_width,
         r1=wCrit$TN_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
         r2=3)
 })
@@ -823,7 +849,7 @@ output$TNg <- highcharter::renderHighchart({
 output$TPg <- highcharter::renderHighchart({
   gauge(data = dplyr::select(getData(), Date, TP), var = 'Total Phosphorus',unit=' mg/L',
         max = 0.6,g1=0,g2=wCrit$TP_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        round=2,
+        round=2, width = input$screen_width,
         r1=wCrit$TP_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
         r2=1)
 })
@@ -831,38 +857,38 @@ output$TPg <- highcharter::renderHighchart({
 # Gauge plot for TSS displays most recent value:
 output$TSSg <- highcharter::renderHighchart({
   gauge(data = dplyr::select(getData(), Date, TSS), var = 'Total Suspended Solids',unit=' mg/L',
-        max = 16,g1=0,g2=16,round=2,r1=0,r2=0)
+        max = 16,g1=0,g2=16,round=2, width = input$screen_width , r1=0,r2=0)
 })
 
 # Gauge plot for turbidity displays most recent value:
 output$Turg <- highcharter::renderHighchart({
   gauge(data = dplyr::select(getData(), Date, Turbidity), var = 'Turbidity',unit=' NTU',
-        max = 20,g1=0,g2=20,round=2, r1=0, r2=0)
+        max = 20,g1=0,g2=20,round=2, r1=0, r2=0, width = input$screen_width )
 })
 
 # Gauge plot for secchi displays most recent value:
 output$Secg <- highcharter::renderHighchart({
   gauge(data = dplyr::select(getData(), Date, Secchi), var = 'Secchi Depth',unit=' m',
-        max = 4,g1=0,g2=4,round=2,r1=0,r2=0)
+        max = 4,g1=0,g2=4,round=2,r1=0,r2=0, width = input$screen_width )
 })
 
 # Gauge plot for temperature displays most recent value:
 output$Tg <- highcharter::renderHighchart({
   gauge(data = dplyr::select(getData(), Date, Temp), var = 'Temperature',unit='°C',
-        max = 30,g1=0,g2=30,round=2,r1=0,r2=0)
+        max = 30,g1=0,g2=30,round=2,r1=0,r2=0, width = input$screen_width )
 })
 
 # Gauge plot for salinity displays most recent value:
 output$Sg <- highcharter::renderHighchart({
   gauge(data = dplyr::select(getData(), Date, Salinity), var = 'Salinity',unit=' ppt',
-        max = 30,g1=0,g2=30,round=2,r1=0,r2=0)
+        max = 30,g1=0,g2=30,round=2,r1=0,r2=0, width = input$screen_width)
 })
 
 # Gauge plot for E. coli displays most recent value:
 output$eg <- highcharter::renderHighchart({
   gauge(data = dplyr::select(getData(), Date, Ecoli), var = HTML('<em>E. coli</em>'),unit=' MPN/100mL',
         max = 1000,g1=0,g2=wCrit$Ecoli_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        round=0,
+        round=0, width = input$screen_width,
         r1=wCrit$Ecoli_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
         r2=1000)
 })
@@ -871,7 +897,7 @@ output$eg <- highcharter::renderHighchart({
 output$entg <- highcharter::renderHighchart({
   gauge(data = dplyr::select(getData(), Date, Entero), var = HTML('<em>Enterococci</em>'),unit=' MPN/100mL',
         max = 1000,g1=0,g2=wCrit$Entero_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        round=0,
+        round=0, width = input$screen_width,
         r1=wCrit$Entero_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
         r2=1000)
 })
