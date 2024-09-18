@@ -88,6 +88,7 @@ wqShp <- sf::st_read('GIS/Waterbody_IDs_(WBIDs).shp') |>
                     ifelse(Type %in% c('TIDAL','FRESHWATER') & Status == 'Active', '#006400',
                      ifelse(Type %in% c('TIDAL','FRESHWATER') & Status == 'Inactive', '#E69F00',
                                'gray60'))))),
+         interactive = ifelse(WBID %in% c(1486,'1618A','1603A'), FALSE,TRUE),
          chla_crit = wCrit$chla_crit[match(WBID,wCrit$WBID)],
          TN_crit = wCrit$TN_crit[match(WBID,wCrit$WBID)],
          TP_crit = wCrit$TP_crit[match(WBID,wCrit$WBID)],
@@ -133,7 +134,7 @@ m <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = TRUE,
 # This will allow users to highlight specific waterbody types:
 for (type in unique(wqShp$Type)) {
   m <- m |> leaflet::addPolygons(
-    data = wqShp[wqShp$Type == type,],
+    data = wqShp[wqShp$Type == type & wqShp$interactive == TRUE,],
     group = type,  
     weight = 0.8,
     fillOpacity = 0.3,
@@ -178,7 +179,21 @@ m <- m |> leaflet::addPolygons(
   baseGroups = c("CartoDB.Positron", "CartoDB.DarkMatter", "Esri.WorldImagery", 
                  "Esri.WorldTopoMap", "OpenTopoMap"),
   overlayGroups = c(unique(wqShp$Type)),
-  options = leaflet::layersControlOptions(collapsed = TRUE)) |>
+  options = leaflet::layersControlOptions(collapsed = TRUE)) |> 
+  leaflet::addPolygons(
+    data = wqShp[wqShp$interactive == FALSE,],
+    popup = NULL,
+    label = NULL,
+    highlightOptions = NULL,
+    weight = 0.8,
+    fillOpacity = 0.3,
+    stroke = TRUE,
+    color = 'black',
+    opacity = 0.7,
+    fill = TRUE,
+    fillColor = 'gray60',
+    options = leaflet::pathOptions(clickable = FALSE)
+  ) |>
   leaflet::addScaleBar(position = 'bottomleft') |>
   leaflegend::addLegendImage(
     images = Ssymbols,
@@ -191,7 +206,7 @@ m <- m |> leaflet::addPolygons(
     title = htmltools::tags$div('Site Type',
                                 style = 'font-size: 15px; text-align: center;
                                 font-weight: bold;'),
-    position = 'bottomleft')
+    position = 'bottomleft') 
 
 
 #'*---------------------------GATHER DATA---------------------------*
@@ -468,7 +483,7 @@ nsModal <- modalDialog(
   title = "NOTICE",
   HTML("<b>Pinellas County stopped water quality sampling in this area in 2012. For more recent data please contact the City of St. Petersburg Public Works at waterdept@stpete.org.</b>"),
   easyClose = TRUE,
-  footer = NULL
+  footer = modalButton("Close")
 )
 
 observeEvent(input$mapplo_shape_click, {

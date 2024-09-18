@@ -22,7 +22,7 @@ allens <- function(input,value){
      51 days for the rest of the year (dry season).  Site 19-02 is tidally influenced, 
      so it is assessed separately from the other sites, which are freshwater.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -49,7 +49,7 @@ alligator <- function(input,value){
       plant species, invasive vegetation, and sensitive species, and assess the 
       overall plant community composition.",
       easyClose = TRUE,
-      footer = NULL)) 
+      footer = modalButton("Close"))) 
     })
 }
 
@@ -71,7 +71,7 @@ anclote <- function(input,value){
       Two sites are currently monitored, site 01-01 at the Alternate Highway 19 
       bridge and site 01-08 just east of the Forest Hills Golf and Country Club.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -94,7 +94,7 @@ hollin <- function(input,value){
       The upper two sites, 01-10 and 01-11, are located in wetland habitats 
       with very sluggish flow.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
   })
 }
 
@@ -119,7 +119,7 @@ cross_bayou <- function(input,value){
       The Environmental Protection Commission of Hillsborough County (EPCHC) monitors 
       the eastern portions of Old Tampa Bay using a similar methodology.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
   })
 }
 
@@ -151,7 +151,7 @@ bcb <- function(input,value, strata){
       Program (TBEP) and the EPCHC to conduct seagrass surveys and sediment and benthic 
       invertebrate assessments every year.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -177,7 +177,7 @@ bishop <- function(input,value){
       in the stream. Biological assessment in the North Branch is not performed 
       due to the tidal influence.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -205,7 +205,7 @@ brooker <- function(input,value){
       macroinvertebrates living in the stream, estimates of the amount of algae 
       present, and documentation of nuisance exotic vegetation in the stream.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -226,7 +226,7 @@ cedar <- function(input,value){
       "Cedar Creek flows west into the northern part of Clearwater Harbor in Dunedin 
       and is tidally influenced.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -247,7 +247,7 @@ cross <- function(input,value){
       Boca Ciega Bay from sites 24-01 and 24-07, while the flow in North Cross 
       Bayou, as measured at 24-02, is northward into Old Tampa Bay.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -271,7 +271,7 @@ curlew <- function(input,value){
       living in the stream, estimates of the amount of algae present, and 
       documentation of nuisance exotic vegetation in the stream.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -292,7 +292,7 @@ joes <- function(input,value){
       Cross Bayou Canal.  One of the major tributaries to Joes Creek is Miles 
       Creek, which flows west and then north to join Joes Creek.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -312,7 +312,7 @@ klosterman <- function(input,value){
       "Klosterman Creek flows west into St. Joseph Sound, and much of the watershed 
       is located in the Innisbrook Golf Club.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -335,7 +335,7 @@ long <- function(input,value){
       the amount of algae present and documenting nuisance exotic vegetation in 
       the stream.",
       easyClose = TRUE,
-      footer = NULL)) 
+      footer = modalButton("Close"))) 
     })
 }
 
@@ -368,7 +368,7 @@ lt <- function(input,value){
       invasive vegetation, and sensitive species, and assessing the overall plant 
       community composition.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -390,7 +390,7 @@ mckay <- function(input,value){
       amount of algae present and documenting nuisance exotic vegetation in the 
       stream.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -411,7 +411,7 @@ church <- function(input,value){
       of the plant community in the creek, which included estimating the amount of 
       algae present and documenting nuisance exotic vegetation in the stream.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
   })
 }
 
@@ -433,7 +433,7 @@ mullet <- function(input,value){
       macroinvertebrates living in the stream, estimates of the amount of algae 
       present, and documentation of nuisance exotic vegetation in the stream.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -466,7 +466,7 @@ otbN <- function(input,value,strata){
       Tampa Bay has improved significantly, and the health of the benthic community
       has varied in Old Tampa Bay, but overall is considered in fair condition.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
   })
 }
 
@@ -500,7 +500,7 @@ otbS <- function(input,value,strata){
       of the benthic community has varied in Old Tampa Bay, but overall is 
       considered in fair condition.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -524,7 +524,7 @@ rb <- function(input,value,strata){
       The Environmental Protection Commission of Hillsborough County (EPCHC) monitors 
       the eastern portions of Old Tampa Bay using a similar methodology.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -544,7 +544,7 @@ roosevelt <- function(input,value){
       "Roosevelt Creek flows in a general northerly direction into Feather Sound 
       in Old Tampa Bay.  It has been channelized along much of its length.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -567,7 +567,7 @@ sa_b <- function(input,value,strata){
       which includes documenting native plant species, invasive vegetation, and 
       sensitive species, and assessing the overall plant community composition.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
     })
 }
 
@@ -595,7 +595,7 @@ sjs <- function(input,value,strata){
       Pinellas County conducts seagrass surveys and sediment and benthic invertebrate 
       assessments every other year.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
   })
 }
 
@@ -620,7 +620,7 @@ bee <- function(input,value){
       macroinvertebrates living in the stream, estimates of the amount of algae
       present, and documentation of nuisance exotic vegetation in the stream.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
   })
 }
 
@@ -633,7 +633,7 @@ noInfo <- function(input,value){
       "This watershed has not been sampled by Pinellas County and no information 
       available at this time.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
   })
 }
 
@@ -646,7 +646,7 @@ tbd <- function(input,value){
       "The information for this watershed is under development and will be available
       as soon as possible.",
       easyClose = TRUE,
-      footer = NULL))
+      footer = modalButton("Close")))
   })
 }
 
@@ -727,8 +727,6 @@ gauge <- function(data,var,unit,max,round,g1,g2,r1,r2,fs){
         wrap = FALSE
       )
     )
-  
-  # return(highcharter::hc_size(chart, height = 200))
   return(chart)
 }
 
