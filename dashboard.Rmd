@@ -1010,17 +1010,14 @@ Data Download
 ```{r}
 
 # Get data for download
-dat <- reactive({
-  return(wqIn |> 
-  dplyr::filter(Level %in% c('Surface','Bottom')) |>
- # dplyr::mutate(TN = TKN + NOX) |>
-  tidyr::drop_na(WBID))
-
+datWB <- reactive({
+  return(dat <- wqIn |>
+           dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()]))
 })
 
 # Create a reactive table:
 tab <- reactive({
-  dat <- dat()
+  dat <- datWB()
     out <- reactable::reactable(dat,
     defaultColDef = reactable::colDef(
       footerStyle = list(fontWeight = "bold"),
@@ -1034,18 +1031,28 @@ tab <- reactive({
 })
 
 # Data download:
-output$wqdata <- downloadHandler(
+output$datFull <- downloadHandler(
   filename = function(){'Pinellas_County_Water_Quality_Data_2003_2024.xlsx'},
   content = function(file){
-    dat <- dat()
-    #write.csv(dat, file, quote = TRUE, row.names = FALSE)
-    openxlsx::write.xlsx(dat, file)
+    file.copy('Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx',file)
   }
 )
 
+output$datSel <- downloadHandler(
+  filename = function(){paste0('Pinellas_County_',site(),'_Water_Quality_Data.xlsx')},
+  content = function(file){
+    openxlsx::write.xlsx(datWB(), file)
+  }
+)
+
+
 # Data download button:
-fillCol(flex = c(NA, 1),
-  shinyWidgets::downloadBttn('wqdata', 'Download Data', 
+fillCol(flex = c(0.06,0.05, 1),
+  shinyWidgets::downloadBttn('datFull', paste0('Download Period of Record Data (',
+                                              round(file.size('Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx')/(1024^2),1),' Mb)'), 
+                             style = 'simple', block = TRUE, color = 'success'),
+  shinyWidgets::downloadBttn('datSel', paste0('Download Selected Site Data (',
+                                              format(object.size(reactive({datWB()})), units = "B"),')'), 
                              style = 'simple', block = TRUE, color = 'success'),
   reactable::renderReactable(tab())
   )
