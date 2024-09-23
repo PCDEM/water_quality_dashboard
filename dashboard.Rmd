@@ -973,6 +973,44 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 Red Tide
 ===========================================================
 
+```{r}
+# Initialize a reactive value to track if a water quality subtab has been clicked yet:
+click <- reactiveVal(TRUE)
+
+# UI for the initial informational popup:
+txt <- modalDialog(
+  title = "NAVIGATING THE RED TIDE DATA PAGE",
+  HTML("<i>*Note: if the red tide map does not appear to be working properly, please try refreshing the page.</i>"),
+  tags$p(""),
+  HTML("<b>Getting started:</b>"),
+  tags$p(""),
+  tags$li("View the points on the map to see the most recent red tide status."),
+  tags$p(""),
+  tags$li("The diamond points are sites monitored by Pinellas County."),
+  tags$p(""),
+  tags$li("The circle points are sites monitored by FWC."),
+  br(),
+  HTML("<b>Viewing the data:</b>"),
+  tags$p(""),
+  tags$li("Click any of the points to view more information about that site."),
+  tags$p(""),
+  tags$li("Click the popup arrow at the bottom of the map to view a table of the data."),
+  easyClose = TRUE,
+  footer = modalButton("Close"),
+  style = "font-size:90%"
+)
+
+# Make sure initial info popup only displayed once and not again after subtab click:
+observeEvent(input$active_tab, {
+  if (input$active_tab == "Red Tide" & click()) {
+    showModal(txt)
+    click(FALSE) 
+  }
+})
+```
+
+
+
 <iframe width="100%" height="100%" src="https://www.arcgis.com/apps/webappviewer/index.html?id=7c18e5858be14368a660bda35f4acc68">
 </iframe>
 
@@ -1051,9 +1089,11 @@ fillCol(flex = c(0.06,0.05, 1),
   shinyWidgets::downloadBttn('datFull', paste0('Download Period of Record Data (',
                                               round(file.size('Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx')/(1024^2),1),' Mb)'), 
                              style = 'simple', block = TRUE, color = 'success'),
-  shinyWidgets::downloadBttn('datSel', paste0('Download Selected Site Data (',
-                                              format(object.size(reactive({datWB()})), units = "B"),')'), 
+  shinyWidgets::downloadBttn('datSel', 'Download Selected Site Data', 
                              style = 'simple', block = TRUE, color = 'success'),
+  # shinyWidgets::downloadBttn('datSel', paste0('Download Selected Site Data (',
+                                              # format(object.size(wqIn), units = "KB"),')'), 
+                             # style = 'simple', block = TRUE, color = 'success'),
   reactable::renderReactable(tab())
   )
 ```
