@@ -1,7 +1,3 @@
-box::use(
-  dplyr[`%>%`]
-)
-
 # Info for Allen's Creek (WBID: 1604, 1604B1)
 allens <- function(input,value){
   observeEvent(input[[value]], {  
@@ -678,7 +674,18 @@ plt <- function(data, var,crit = 0){
   }
 }
 
-# Function to create a gauge plot:
+#' Function to create a gauge plot:
+#' data: data frame with Date and variable to plot;
+#' var: variable name;
+#' unit: unit of measurement;
+#' max: maximum value for the gauge;
+#' round: number of decimal places to round the value;
+#' g1: green band lower limit;
+#' g2: green band upper limit;
+#' r1: red band lower limit;
+#' r2: red band upper limit;
+#' fs: font size;
+#' width: width of the user screen (obtained from sessionInfo());
 gauge <- function(data,var,unit,max,round,g1,g2,r1,r2,fs,width){
   chart <- highcharter::highchart() |>
     highcharter::hc_chart(type = "gauge") |>
@@ -698,9 +705,9 @@ gauge <- function(data,var,unit,max,round,g1,g2,r1,r2,fs,width){
       dataLabels = list(
         format = paste0('{point.y:.',round,'f}',unit),
         borderWidth = 0,
-        style = list(fontSize = '16px'),
+        style = list(fontSize = paste0(width*0.01,'px')),
         verticalAlign = 'top',
-        y = 32
+        y = width*0.015
       )
     ) |>
     highcharter::hc_yAxis(

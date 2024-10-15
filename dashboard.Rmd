@@ -22,11 +22,6 @@ resource_files:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 
-# Use %>% with calling package
-box::use(
-  dplyr[`%>%`]
-)
-
 # Set na.rm = TRUE for mean
 mean_n <- purrr::partial(mean, na.rm = TRUE)
 
@@ -34,9 +29,7 @@ mean_n <- purrr::partial(mean, na.rm = TRUE)
 source('R/funcs.R')
 ```
 
-```{r water quality, include=FALSE}
-
-#'*---------------------------TIDY DATA---------------------------*
+```{r data handling, include=FALSE}
 
 # Import water quality data:
 wqIn <- readxl::read_excel("Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx", 
@@ -46,185 +39,191 @@ wqIn <- readxl::read_excel("Data/Pinellas_County_Water_Quality_Data_2003_2024.xl
 # match FDEP WBID names due to Pinellas County monitoring program specifics. For 
 # example, Lake Seminole is FDEP WBID 1618 but is split into 1618_N and 1618_S
 # since the north and south lobes of the lake are sampled separately:
-wCrit <- readxl::read_excel('Data/WBID_criteria.xlsx',sheet='Criteria')
+wCrit <- readxl::read_excel('Data/WBID_criteria.xlsx', sheet = 'Criteria')
 
-# Filter the data add a TN column and remove sites in St. Pete (not sampled anymore):
-wq <- wqIn |> 
+# Calculate means for parameters and keep only surface level data (those are the 
+# data used to generate plots in the dashboard):
+wqM <- wqIn |>
   dplyr::filter(Level == 'Surface') |>
   dplyr::mutate(TN = TKN + NOX) |>
-  tidyr::drop_na(WBID)
-
-# Calculate mean water quality data in each basin:
-wqM <- wq |> 
   dplyr::group_by(WBID, Date, Segment,Type) |>
   dplyr::summarise(
-            DO = mean_n(`DO%`),
-            chl_a = mean_n(`Chl-a`),
-            TN = mean_n(TN),
-            TP = mean_n(TP),
-            TSS = mean_n(TSS),
+            DO        = mean_n(`DO%`),
+            chl_a     = mean_n(`Chl-a`),
+            TN        = mean_n(TN),
+            TP        = mean_n(TP),
+            TSS       = mean_n(TSS),
             Turbidity = mean_n(Turbidity),
-            Secchi = mean_n(Secchi),
-            Temp = mean_n(Temp_Water),
-            Salinity = mean_n(Salinity),
-            Ecoli = mean_n(E_coli),
-            Entero = mean_n(Enterococci)
+            Secchi    = mean_n(Secchi),
+            Temp      = mean_n(Temp_Water),
+            Salinity  = mean_n(Salinity),
+            Ecoli     = mean_n(E_coli),
+            Entero    = mean_n(Enterococci)
             ) |>
   dplyr::ungroup()
 
 
-# Read in PC WBID shapefile:
+# Read in Pinellas WBID shapefile and add site type and status. Make the WBIDs
+# around Lakes Seminole and Tarpon non-interactive since they are not sampled
+# and to make the Lakes easier to click:
 wqShp <- sf::st_read('GIS/Waterbody_IDs_(WBIDs).shp') |>
   dplyr::select(WBID, ID = WATERBODY_) |>
   sf::st_transform("+proj=longlat +ellps=WGS84 +datum=WGS84") |>
-  dplyr::mutate(Type = wqM$Type[match(WBID,wqM$WBID)],
+  dplyr::mutate(Type = wqM$Type[match(WBID, wqM$WBID)],
          Type = ifelse(is.na(Type), 'NOT SAMPLED', Type),
-         Status = ifelse(WBID %in% c('1558C','1558B','1709D','1709F','1716A','1696',
-                                     '1603B','1700','1683','1530','1624A','1556A'), 'Inactive', 
-                         ifelse(Type == 'NOT SAMPLED','Not Sampled','Active')),
+         Status = ifelse(WBID %in% c('1558C', '1558B', '1709D', '1709F', '1716A',
+                                     '1696', '1603B', '1700', '1683', '1530',
+                                     '1624A', '1556A'), 'Inactive', 
+                         ifelse(Type == 'NOT SAMPLED', 'Not Sampled', 'Active')),
          color = ifelse(Type == 'COASTAL' & Status == 'Active', '#00244c',
                   ifelse(Type == 'COASTAL' & Status == 'Inactive', '#6A5ACD',
                    ifelse(Type == 'LAKE', '#40E0D0', 
-                    ifelse(Type %in% c('TIDAL','FRESHWATER') & Status == 'Active', '#006400',
-                     ifelse(Type %in% c('TIDAL','FRESHWATER') & Status == 'Inactive', '#E69F00',
+                    ifelse(Type %in% c('TIDAL', 'FRESHWATER') & Status == 'Active', '#006400',
+                     ifelse(Type %in% c('TIDAL', 'FRESHWATER') & Status == 'Inactive', '#E69F00',
                                'gray60'))))),
-         interactive = ifelse(WBID %in% c(1486,'1618A','1603A'), FALSE,TRUE),
-         chla_crit = wCrit$chla_crit[match(WBID,wCrit$WBID)],
-         TN_crit = wCrit$TN_crit[match(WBID,wCrit$WBID)],
-         TP_crit = wCrit$TP_crit[match(WBID,wCrit$WBID)],
-         DO_crit = wCrit$DO_crit[match(WBID,wCrit$WBID)],
-         Ecoli_crit = wCrit$Ecoli_crit[match(WBID,wCrit$WBID)],
+         interactive = ifelse(WBID %in% c(1486, '1618A', '1603A'), FALSE, TRUE),
+         chla_crit   = wCrit$chla_crit[match(WBID,wCrit$WBID)],
+         TN_crit     = wCrit$TN_crit[match(WBID,wCrit$WBID)],
+         TP_crit     = wCrit$TP_crit[match(WBID,wCrit$WBID)],
+         DO_crit     = wCrit$DO_crit[match(WBID,wCrit$WBID)],
+         Ecoli_crit  = wCrit$Ecoli_crit[match(WBID,wCrit$WBID)],
          Entero_crit = wCrit$Entero_crit[match(WBID,wCrit$WBID)])
+```
 
-# # Generate an interactive map of wqShp
-leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = TRUE,
-                                                   zoomSnap = 0.1, 
-                                                   zoomDelta = 1)) |>
-  leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
-  leaflet::setView(lng = -82.72, lat = 27.905, zoom = 10.6) |>
-  leaflet::addPolygons(data = wqShp,
-    weight = 1.5,
-    fillOpacity = 0.3,
-    stroke = TRUE,
-    color = 'black',
-    opacity = 0.7,
-    fill = TRUE,
-    fillColor = ~color,
-    label = ~ID,
-    highlightOptions = leaflet::highlightOptions(color = 'white',
-                                                 weight = 4,
-                                                 opacity = 0.5))
+```{r WBID map, include=FALSE}
 
-
-#'*----------------------------GENERATE MAP-----------------------------------*
-
-# Start by creating the base map with tiles and layers control options
-m <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = TRUE, 
-                                                        zoomSnap = 0.1, 
-                                                        zoomDelta = 1)) |>
+# Create the base map and set options:
+m <- leaflet::leaflet(
+  options = leaflet::leafletOptions(
+    zoomControl = TRUE, 
+    zoomSnap    = 0.1, 
+    zoomDelta   = 1)
+  ) |>
   leaflet::addTiles(attribution = '') |>
-  leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron, group = 'CartoDB.Positron') |>
-  leaflet::addProviderTiles(leaflet::providers$CartoDB.DarkMatter, group = 'CartoDB.DarkMatter') |>
-  leaflet::addProviderTiles(leaflet::providers$Esri.WorldImagery, group = 'Esri.WorldImagery') |>
-  leaflet::addProviderTiles(leaflet::providers$Esri.WorldTopoMap, group = 'Esri.WorldTopoMap') |>
-  leaflet::addProviderTiles(leaflet::providers$OpenTopoMap, group = 'OpenTopoMap') |>
-  leaflet::setView(lng = -82.72, lat = 27.905, zoom = 10.6)
+  leaflet::addProviderTiles(
+    leaflet::providers$CartoDB.Positron, group = 'CartoDB.Positron'
+    ) |>
+  leaflet::addProviderTiles(
+    leaflet::providers$Esri.WorldImagery, group = 'Esri.WorldImagery'
+    ) |>
+  leaflet::addProviderTiles(
+    leaflet::providers$OpenTopoMap, group = 'OpenTopoMap'
+    ) |>
+  leaflet::setView(
+    lng  = -82.72, 
+    lat  = 27.905, 
+    zoom = 10.6
+    )
 
-# Iterate over each unique type in wqShp to add them as separate polygon layers.
-# This will allow users to highlight specific waterbody types:
+# Iterate over each unique waterbody type and add them as separate polygon layers.
+# This will allow users to highlight specific different water types:
 for (type in unique(wqShp$Type)) {
   m <- m |> leaflet::addPolygons(
-    data = wqShp[wqShp$Type == type & wqShp$interactive == TRUE,],
-    group = type,  
-    weight = 0.8,
+    data        = wqShp[wqShp$Type == type & wqShp$interactive == TRUE, ],
+    group       = type,  
+    weight      = 0.8,
     fillOpacity = 0.3,
-    stroke = TRUE,
-    color = 'black',
-    opacity = 0.7,
-    fill = TRUE,
-    fillColor = ~color,
-    label = ~ID,
-    highlightOptions = leaflet::highlightOptions(color = 'white', weight = 4,
-                                                 opacity = 0.5)) 
-}
+    stroke      = TRUE,
+    color       = 'black',
+    opacity     = 0.7,
+    fill        = TRUE,
+    fillColor   = ~color,
+    label       = ~ID,
+    highlightOptions = leaflet::highlightOptions(
+      color = 'white', 
+      weight = 4,
+      opacity = 0.5)
+    ) 
+  }
 
-# details for WBID color legend:
-Sshapes <- c('rect', 'rect','rect','rect','rect','rect')
-Ssymbols <- setNames(Map(
-  f = leaflegend::makeSymbol,
-  shape = Sshapes,
-  color = 'black',
-  fillColor = c('#00244c','#6A5ACD','#40E0D0','#006400','#E69F00','#696969'),
-  opacity = 1,
-  fillOpacity = 0.5,
-  height = 20,
-  width = 20,
-  'stroke-width' = 1), 
-  Sshapes)
+# Custom legend for WBID types:
+legShape <- rep('rect', 6)
+leg <- setNames(
+  Map(
+    f              = leaflegend::makeSymbol,
+    shape          = legShape,
+    color          = 'black',
+    fillColor      = c('#00244c', '#6A5ACD', '#40E0D0', '#006400', '#E69F00', '#696969'),
+    opacity        = 1,
+    fillOpacity    = 0.5,
+    height         = 20,
+    width          = 20,
+    'stroke-width' = 1
+    ), 
+  legShape
+  )
 
-
-# Highlight specific polygon based on WBID. Initially select WBID 1474 and add
-# the WBID highlight legend:
+# Add other elements to the map:
 m <- m |> leaflet::addPolygons(
-  data = wqShp[wqShp$WBID == 1474,],
-  layerId = 'shape',
+  data        = wqShp[wqShp$WBID == '1486A', ],
+  layerId     = 'shape',
   fillOpacity = 0.17,
-  stroke = TRUE,
-  color = 'green',
-  fill = TRUE,
-  fillColor = ~color,
-  label = ~ID) |> 
+  stroke      = TRUE,
+  color       = 'green',
+  fill        = TRUE,
+  fillColor   = ~color,
+  label       = ~ID
+  ) |> 
   leaflet::addLayersControl(
-  position = "topleft",  
-  baseGroups = c("CartoDB.Positron", "CartoDB.DarkMatter", "Esri.WorldImagery", 
-                 "Esri.WorldTopoMap", "OpenTopoMap"),
-  overlayGroups = c(unique(wqShp$Type)),
-  options = leaflet::layersControlOptions(collapsed = TRUE)) |> 
+    position = "topleft",  
+    baseGroups = c("CartoDB.Positron", "Esri.WorldImagery", "OpenTopoMap"),
+    overlayGroups = c(unique(wqShp$Type)),
+    options = leaflet::layersControlOptions(
+      collapsed = TRUE)
+    ) |> 
   leaflet::addPolygons(
-    data = wqShp[wqShp$interactive == FALSE,],
-    popup = NULL,
-    label = NULL,
+    data             = wqShp[wqShp$interactive == FALSE, ],
+    popup            = NULL,
+    label            = NULL,
     highlightOptions = NULL,
-    weight = 0.8,
-    fillOpacity = 0.3,
-    stroke = TRUE,
-    color = 'black',
-    opacity = 0.7,
-    fill = TRUE,
-    fillColor = 'gray60',
-    options = leaflet::pathOptions(clickable = FALSE)
-  ) |>
-  leaflet::addScaleBar(position = 'bottomleft') |>
+    weight           = 0.8,
+    fillOpacity      = 0.3,
+    stroke           = TRUE,
+    color            = 'black',
+    opacity          = 0.7,
+    fill             = TRUE,
+    fillColor        = 'gray60',
+    options          = leaflet::pathOptions(clickable = FALSE)
+    ) |>
+  leaflet::addScaleBar(
+    position = 'bottomleft'
+    ) |>
   leaflegend::addLegendImage(
-    images = Ssymbols,
-    labels = c('Coastal-Active','Coastal-Inactive','Lake','Stream-Active', 'Stream-Inactive',
-               'Not Sampled'),
-    labelStyle = "font-size: 14px;",
-    width = 15,
-    height = 11,
+    images      = leg,
+    labels      = c('Coastal-Active', 'Coastal-Inactive', 'Lake', 'Stream-Active', 
+                    'Stream-Inactive', 'Not Sampled'),
+    labelStyle  = "font-size: 14px;",
+    width       = 15,
+    height      = 11,
     orientation = 'vertical',
     title = htmltools::tags$div('Site Type',
                                 style = 'font-size: 15px; text-align: center;
                                 font-weight: bold;'),
-    position = 'bottomleft') 
+    position = 'bottomleft'
+    ) 
+```
 
+```{r get data, include=FALSE}
 
-#'*---------------------------GATHER DATA---------------------------*
-
-# Get data for each WBID based on click:
+# Get data for each WBID based on user click:
 getData <- reactive({ 
   if (is.null(input$mapplo_shape_click)){
-    strat <- '1474'
+    strat <- '1486A'
     } else {
-    strat <- getStrata(spDat = wqShp,
-                       lat = input$mapplo_shape_click$lat, 
-                       lng = input$mapplo_shape_click$lng)
+      strat <- getStrata(
+        spDat = wqShp,
+        lat = input$mapplo_shape_click$lat, 
+        lng = input$mapplo_shape_click$lng
+        )
     }
-  data <- data.frame(dplyr::filter(wqM, WBID == strat) |>
-    dplyr::select(Date, DO, chl_a, TN, TP, TSS, Turbidity, Secchi, Temp, Salinity, 
-                  Ecoli, Entero))
+  data <- data.frame(
+    dplyr::filter(wqM, WBID == strat) |>
+    dplyr::select(
+      Date, DO, chl_a, TN, TP, TSS, Turbidity, Secchi, Temp, Salinity, Ecoli, Entero
+      )
+    )
   return(data)
-})
+  })
 
 
 mapplo <- leaflet::leafletProxy('mapplo') 
@@ -821,10 +820,17 @@ cls = c('green','yellow','red')
 
 # Gauge plot for DO displays most recent value:
 output$DOg <- highcharter::renderHighchart({
-  gauge(data = dplyr::select(getData(), Date, DO), var = 'Dissolved Oxygen',unit='%',
-        max= 100, g1 = wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        round = 1, width = input$screen_width,
-        g2=100,r1=0,r2=wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]])
+  gauge(
+    data = dplyr::select(getData(), Date, DO),
+    var = 'Dissolved Oxygen',
+    unit='%',
+    max= 100, 
+    g1 = wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+    round = 1,
+    width = input$screen_width, 
+    g2=100,
+    r1=0,
+    r2=wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]])
 })  
 
 # Gauge plot for Chl-a displays most recent value:
