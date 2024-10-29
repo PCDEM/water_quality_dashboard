@@ -203,7 +203,7 @@ m <- m |> leaflet::addPolygons(
     ) 
 ```
 
-```{r get data, include=FALSE}
+```{r get data and plots, include=FALSE}
 
 # Get data for each WBID based on user click:
 getData <- reactive({ 
@@ -212,10 +212,10 @@ getData <- reactive({
     } else {
       strat <- getStrata(
         spDat = wqShp,
-        lat = input$mapplo_shape_click$lat, 
-        lng = input$mapplo_shape_click$lng
+        lat   = input$mapplo_shape_click$lat, 
+        lng   = input$mapplo_shape_click$lng
         )
-    }
+      }
   data <- data.frame(
     dplyr::filter(wqM, WBID == strat) |>
     dplyr::select(
@@ -225,136 +225,172 @@ getData <- reactive({
   return(data)
   })
 
-
 mapplo <- leaflet::leafletProxy('mapplo') 
 
-# Change the highlighted watershed:
+# Change the highlighted WBID based on user click:
 observeEvent(input$mapplo_shape_click, {
-      sName <- getStrata(spDat = wqShp,
-                       lat = input$mapplo_shape_click$lat,
-                       lng = input$mapplo_shape_click$lng)
+  sName <- getStrata(
+    spDat = wqShp,                   
+    lat   = input$mapplo_shape_click$lat,
+    lng   = input$mapplo_shape_click$lng
+    )
   mapplo <- mapplo |>
     leaflet::removeShape('shape') |>
-    leaflet::addPolygons(data = dplyr::filter(wqShp, WBID == sName),
-                layerId = 'shape',
-                    fillOpacity = 0.17,
-      stroke = TRUE,
+    leaflet::addPolygons(
+      data        = dplyr::filter(wqShp, WBID == sName),
+      layerId     = 'shape',
+      fillOpacity = 0.17,
+      stroke      = TRUE,
       color = ifelse(wqShp$Status[wqShp$WBID == sName] == 'Active', 'green', 
-                     ifelse(wqShp$Status[wqShp$WBID == sName] == 'Inactive', 'red',
-                            'gray')), 
-      fill = TRUE,
+               ifelse(wqShp$Status[wqShp$WBID == sName] == 'Inactive', 'red',
+                      'gray')), 
+      fill      = TRUE,
       fillColor = ~color,
-      label = ~ID)
-})
+      label     = ~ID
+      )
+  })
 
-# Get the name of the watershed:
+# Get the name of the WBID clicked by the user:
 site <- reactive({
   if(is.null(input$mapplo_shape_click)){
     sName <- '1474'
   } else {
-    sName <- getStrata(spDat = wqShp,
-                       lat = input$mapplo_shape_click$lat,
-                       lng = input$mapplo_shape_click$lng)
-  }
+    sName <- getStrata(
+      spDat = wqShp,
+      lat = input$mapplo_shape_click$lat,
+      lng = input$mapplo_shape_click$lng
+      )
+    }
     return(wqShp$ID[wqShp$WBID == sName])
-})
-
+  })
 
 # Dissolved oxygen plot:
 DOplo <- reactive({
-  return(plt(dplyr::select(getData(), Date, DO) |> tidyr::drop_na(), 'Dissolved Oxygen \n(% sat)',
-             wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]))
+  return(plt(
+    data = dplyr::select(getData(), Date, DO) |> tidyr::drop_na(), 
+    var = 'Dissolved Oxygen \n(% sat)',
+    crit = wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]
+    ))
   })
 
 # Chlorophyll-a plot:
 chlplo <- reactive({
-  return(plt(dplyr::select(getData(), Date, chl_a) |> tidyr::drop_na(), 'Chlorophyll-a \n(µg/L)',
-             wCrit$chla_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]))
+  return(plt(
+    data = dplyr::select(getData(), Date, chl_a) |> tidyr::drop_na(), 
+    var  = 'Chlorophyll-a \n(µg/L)',
+    crit = wCrit$chla_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]
+    ))
   })
 
 # Total nitrogen plot:
 TNplo <- reactive({
-  return(plt(dplyr::select(getData(), Date, TN) |> tidyr::drop_na(), 'Total Nitrogen \n(mg/L)',
-             wCrit$TN_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]))
+  return(plt(
+    data =dplyr::select(getData(), Date, TN) |> tidyr::drop_na(), 
+    var ='Total Nitrogen \n(mg/L)',
+    crit = wCrit$TN_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]
+    ))
   })
 
 # Total phosphorus plot:
 TPplo <- reactive({
-  return(plt(dplyr::select(getData(), Date, TP) |> tidyr::drop_na(), 'Total Phosphorus \n(mg/L)',
-             wCrit$TP_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]))
+  return(plt(
+    data = dplyr::select(getData(), Date, TP) |> tidyr::drop_na(), 
+    var  = 'Total Phosphorus \n(mg/L)',
+    crit = wCrit$TP_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]
+    ))
   })
 
 # Total suspended solids plot:
 TSSplo <- reactive({
-  return(plt(dplyr::select(getData(), Date, TSS) |> tidyr::drop_na(), 'Total Suspended Solids \n(mg/L)'))
+  return(plt(
+    data = dplyr::select(getData(), Date, TSS) |> tidyr::drop_na(), 
+    var  = 'Total Suspended Solids \n(mg/L)'
+    ))
   })
 
 # Turbidity plot:
 NTUplo <- reactive({
-  return(plt(dplyr::select(getData(), Date, Turbidity) |> tidyr::drop_na(), 'Turbidity \n(NTU)'))
+  return(plt(
+    data = dplyr::select(getData(), Date, Turbidity) |> tidyr::drop_na(), 
+    var  = 'Turbidity \n(NTU)'
+    ))
   })
 
 # Secchi depth plot:
 Secplo <- reactive({
-  return(plt(dplyr::select(getData(), Date, Secchi) |> tidyr::drop_na(), 'Secchi Depth \n(m)'))
+  return(plt(
+    data = dplyr::select(getData(), Date, Secchi) |> tidyr::drop_na(), 
+    var  = 'Secchi Depth \n(m)'
+    ))
   })
 
 # Total phosphorus plot:
 Tplo <- reactive({
-  return(plt(dplyr::select(getData(), Date, Temp) |> tidyr::drop_na(), 'Temperature \n(°C)'))
+  return(plt(
+    data = dplyr::select(getData(), Date, Temp) |> tidyr::drop_na(), 
+    var = 'Temperature \n(°C)'
+    ))
   })
 
 # Salinity plot:
 Splo <- reactive({
-  return(plt(dplyr::select(getData(), Date, Salinity) |> tidyr::drop_na(), 'Salinity \n(ppt)'))
+  return(plt(
+    data = dplyr::select(getData(), Date, Salinity) |> tidyr::drop_na(), 
+    var  = 'Salinity \n(ppt)'
+    ))
   })
 
 # E. coli plot:
 eplo <- reactive({
-  return(plt(dplyr::select(getData(), Date, Ecoli) |> tidyr::drop_na(), HTML('<em>E. coli</em> \n(MPN/100mL)'),
-             wCrit$Ecoli_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]))
+  return(plt(
+    data = dplyr::select(getData(), Date, Ecoli) |> tidyr::drop_na(), 
+    var  = HTML('<em>E. coli</em> \n(MPN/100mL)'),
+    crit = wCrit$Ecoli_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]
+    ))
   })
 
 # Enterococcus plot:
 entplo <- reactive({
-  return(plt(dplyr::select(getData(), Date, Entero) |> tidyr::drop_na(), HTML('<em>Enterococci</em> \n(MPN/100mL)'),
-             wCrit$Entero_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]))
+  return(plt(
+    data = dplyr::select(getData(), Date, Entero) |> tidyr::drop_na(), 
+    var  = HTML('<em>Enterococci</em> \n(MPN/100mL)'),
+    crit = wCrit$Entero_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]))
   })
-
 
 # Return watershed info based on clicked WBID:
 Sinf <- function(site){
   Sw <- wqShp$WBID[wqShp$ID == site()]
   if (Sw == 1440) anclote(input, 'info')
   if (Sw == 1475) hollin(input, 'info')
-  if (Sw %in% c(1508,'1508A')) klosterman(input, 'info')
   if (Sw == 1474) brooker(input, 'info')
-  if (Sw == '1527B') bee(input, 'info')
-  if (Sw %in% c(1556,'1556A')) cedar(input, 'info')
-  if (Sw == '1538A') curlew(input, 'info')
-  if (Sw %in% c(1569,'1569A')) bishop(input, 'info')
-  if (Sw == '1575A') mullet(input, 'info')
+  if (Sw == 1643) church(input, 'info')
   if (Sw == 1574) alligator(input, 'info')
-  if (Sw %in% c(1604,'1604B1')) allens(input, 'info')
-  if (Sw %in% c('1627B',1627)) long(input, 'info')
+  if (Sw == '1527B') bee(input, 'info')
+  if (Sw == '1538A') curlew(input, 'info')
   if (Sw == '1624A') roosevelt(input, 'info')
-  if (Sw %in% c(1633,'1633B','1633D','1633E')) mckay(input, 'info')
+  if (Sw == '1575A') mullet(input, 'info')
   if (Sw == '1668A') joes(input, 'info')
   if (Sw == '1486A') lt(input, 'info')
-  if (Sw %in% c('1618_N','1618_S')) sa_b(input, 'info',site)
-  if (Sw == 1643) church(input, 'info')
+  if (Sw == '1618C') cross_bayou(input, 'info')
   if (Sw %in% c(1641,1625)) cross(input, 'info')
+  if (Sw %in% c(1508, '1508A')) klosterman(input, 'info')
+  if (Sw %in% c(1556, '1556A')) cedar(input, 'info')
+  if (Sw %in% c(1569, '1569A')) bishop(input, 'info')
+  if (Sw %in% c(1604, '1604B1')) allens(input, 'info')
+  if (Sw %in% c(1627, '1627B')) long(input, 'info')
+  if (Sw %in% c('1618_N','1618_S')) sa_b(input, 'info',site)
   if (Sw %in% c('1558I','1558H2')) otbN(input, 'info',site)
   if (Sw %in% c('1558H','1558G')) otbS(input, 'info',site)
   if (Sw %in% c('1558F','1661')) rb(input, 'info',site)
   if (Sw %in% c('8045','1528C','1528')) sjs(input, 'info',site)
+  if (Sw %in% c(1633,'1633B','1633D','1633E')) mckay(input, 'info')
   if (Sw %in% c('1528A','1694B','1694A','1558N')) bcb(input, 'info',site)
-  if (Sw == '1618C') cross_bayou(input, 'info')
-  if (Sw %in% c(1529,'1541B','1530A',1530,'1541C',1550,'1603B','1603D','1574A','1567C','1662A',
-                                            '1618D',1614,'1668B','1668D','1558C','1558B',
-                                            1683,'1709D','1709F',1696,'1716A',1700)) tbd(input, 'info')
+  if (Sw %in% c(1529, 1530, 1550, 1614, 1683, 1696, 1700, '1541B', '1530A',
+                '1541C', '1603B', '1603D', '1574A', '1567C', '1662A', '1618D',
+                '1668B', '1668D', '1558C', '1558B', '1709D', '1709F', '1716A',)) 
+    tbd(input, 'info')
   if (Sw == 'Not Sampled') noInfo(input, 'info')
-}
+  }
 
 ```
 
@@ -415,7 +451,7 @@ Water Quality
 
 ## Column {.tabset .tabset-fade data-width="280"}
 
-```{r}
+```{r water quality modal}
 # Initialize a reactive value to track if a water quality subtab has been clicked yet:
 firstClick <- reactiveVal(TRUE)
 
@@ -444,32 +480,36 @@ txt <- modalDialog(
   style = "font-size:90%"
 )
 
-# Make sure initial info popup only displayed once and not again after subtab click:
+# Make sure initial info popup only displayed when the water quality tab is first 
+# opened:
 observeEvent(input$active_tab, {
-  if (input$active_tab == "Water Quality" & firstClick()) {
+  if (input$active_tab == "Water Quality" & firstClick()){
     showModal(txt)
     firstClick(FALSE) 
-  }
-})
+    }
+  })
 ```
 
 
 ### MAP
 
 ```{r}
+
+# Get water quality map:
 output$mapplo <- leaflet::renderLeaflet(m)
 
-# Create a UI element for the info button:
+# Create a UI element for the WBID info button:
 output$info <- renderUI({
   tags$div(id="info-btn-container",
            actionButton("info", 
                         label = HTML(paste0("<i class='fas fa-info-circle'></i> ", 
                                             site())),
-                        style=paste0('font-size:',input$screen_width/115,'px'), class = "btn"))
+                        style = paste0('font-size:', input$screen_width/115, 'px'), 
+                        class = "btn"))
 })
 
-# output map and info button:
-fillCol(flex = c(NA,1,1),
+# Display the map and info button:
+fillCol(flex = c(NA, 1, 1),
         uiOutput('info'),
         leaflet::leafletOutput('mapplo'))
 
@@ -486,10 +526,11 @@ nsModal <- modalDialog(
   footer = modalButton("Close")
 )
 
+# Display a special message for WBIDs in St. Petersburg:
 observeEvent(input$mapplo_shape_click, {
-  if (site() %in% c('SMACKS BAYOU','TAMPA BAY (UPPER SEGMENT)','TAMPA BAY (MIDDLE SEGMENT)',
-                    'BOOKER CREEK','COFFEEPOT BAYOU','34TH STREET BASIN',
-                    'FRENCHMANS CREEK - BASIN U','BAYOU CREEK')) {
+  if (site() %in% c('SMACKS BAYOU', 'TAMPA BAY (UPPER SEGMENT)', 'TAMPA BAY (MIDDLE SEGMENT)',
+                    'BOOKER CREEK', 'COFFEEPOT BAYOU', '34TH STREET BASIN',
+                    'FRENCHMANS CREEK - BASIN U', 'BAYOU CREEK')) {
     showModal(nsModal)
   }
 })
@@ -611,7 +652,7 @@ hexagon with equal probability provided to each hexagon. For each sampling event
 ```{r}
 
 # Display the data for DO, chl_a, TN, and TP
-fillCol(flex = c(1,rep(1,4)),
+fillCol(flex = c(1, rep(1, 4)),
         pltmsg(getData, "DO", DOplo),
         pltmsg(getData, "chl_a", chlplo),
         pltmsg(getData, "TN", TNplo),
@@ -625,7 +666,7 @@ fillCol(flex = c(1,rep(1,4)),
 
 # Display the data for TSS, turbidity, and Secchi. Secchi not collected on stream 
 # sites, only lakes and coastal water:
-fillCol(flex = c(1,rep(1,3)),
+fillCol(flex = c(1, rep(1, 3)),
     pltmsg(getData, "TSS", TSSplo),
     pltmsg(getData, "Turbidity", NTUplo),
     pltmsg(getData, "Secchi", Secplo))
@@ -637,7 +678,7 @@ fillCol(flex = c(1,rep(1,3)),
 ```{r}
 
 # Display the data for temperature and salinity:
-fillCol(flex = c(1,rep(1,3)),
+fillCol(flex = c(1, rep(1, 3)),
     pltmsg(getData, "Temp", Tplo),
     pltmsg(getData, "Salinity", Splo))
 
@@ -648,7 +689,7 @@ fillCol(flex = c(1,rep(1,3)),
 ```{r}
 
 # Bacteria samples only collected in freshwater and tidal stream sites:
-fillCol(flex = c(1,rep(1,2)),
+fillCol(flex = c(1, rep(1, 2)),
     pltmsg(getData, "Ecoli", eplo),
     pltmsg(getData, "Entero", entplo))
 
@@ -659,77 +700,83 @@ fillCol(flex = c(1,rep(1,2)),
 ```{r}
 
 # Create slider input to narrow down the report card:
-sliderInput('year','Select year range',min=2003,max=lubridate::year(Sys.Date())-1,
-            value=c(2003,lubridate::year(Sys.Date())-1),step=1,sep="",
-            width='95%')
+sliderInput('year', 'Select year range', 
+            min   = 2003, 
+            max   = lubridate::year(Sys.Date()) - 1,
+            value = c(2003, lubridate::year(Sys.Date()) - 1), 
+            step  = 1, 
+            sep   = "",
+            width = '95%')
 
-# Update the slider with years available at each site:
+# Update the slider with the years available at each site:
 observe({
-    updateSliderInput(session, 'year', min = min(lubridate::year(getData()$Date)), 
-                     max = ifelse(max(lubridate::year(getData()$Date)) == lubridate::year(Sys.Date()),
-                                  max(lubridate::year(getData()$Date))-1,
-                                  max(lubridate::year(getData()$Date))),
-                    value = c(min(lubridate::year(getData()$Date)),
-                              ifelse(max(lubridate::year(getData()$Date)) == lubridate::year(Sys.Date()),
-                                     max(lubridate::year(getData()$Date))-1,
-                                     max(lubridate::year(getData()$Date)))))
-})
-
-
+    updateSliderInput(
+      session, 'year', 
+      min = min(lubridate::year(getData()$Date)),
+      max = ifelse(max(lubridate::year(getData()$Date)) == lubridate::year(Sys.Date()),
+                   max(lubridate::year(getData()$Date)) - 1,
+                   max(lubridate::year(getData()$Date))),
+      value = c(min(lubridate::year(getData()$Date)),
+                ifelse(max(lubridate::year(getData()$Date)) == lubridate::year(Sys.Date()),
+                       max(lubridate::year(getData()$Date))-1,
+                       max(lubridate::year(getData()$Date))))
+                      )
+  })
 
 # WBID specific pass/fail summary:
 rcd <- reactive({
 
   # Select the data used for the report card:
-  rd <- data.frame(wqIn |>
-    dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()])  |>
-    dplyr::select(Date, WBID, Type, Level, chl_a = `Chl-a`, chla_q = `Chla_q`,
-                  DOsat = `DO%`, DOsat_q = `DO%_q`, TKN, TKN_q, NOX,
-                      NOX_q, TP, TP_q, E_coli, Eco_q, Enterococci, EC_q)) |>
+  rd <- data.frame(
+    wqIn |>
+      dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()]) |>
+      dplyr::select(Date, WBID, Type, Level, chl_a = `Chl-a`, chla_q = `Chla_q`,
+                    DOsat = `DO%`, DOsat_q = `DO%_q`, TKN, TKN_q, NOX, NOX_q, 
+                    TP, TP_q, E_coli, Eco_q, Enterococci, EC_q)) |>
     dplyr::group_by(Date,WBID,Type) |>
     dplyr::summarise_if(is.numeric, mean, na.rm = TRUE)
 
     # Remove data if it has certain qualifiers associated with it:
-    for(i in seq(3,ncol(rd)-1,2)){
-      rd[,i][which(grepl('J|Y|\\?|\\*\\*',rd[,i+1]) == TRUE)] <- NA
+    for(i in seq(3, ncol(rd) - 1, 2)){
+      rd[, i][which(grepl('J|Y|\\?|\\*\\*', rd[, i + 1]) == TRUE)] <- NA
     }
 
   # Calculate the 10% exceedance criteria for DO:
-  do <- data.frame(rd |>
-    dplyr::group_by(Year = lubridate::year(Date), Type) |>
-    dplyr::filter(Year != lubridate::year(Sys.Date())) |>
-    dplyr::summarise(
-      total_samples = dplyr::n(),
-      n_below = ifelse(Type == 'Coastal', length(which(DOsat < 42)),
-                       length(which(DOsat < 38)))) |>
-    dplyr::distinct() |>
-    dplyr::mutate(do_grade = ifelse((n_below/total_samples) > 0.1, 'Fail', 'Pass')))
+  do <- data.frame(
+    rd |>
+      dplyr::group_by(Year = lubridate::year(Date), Type) |>
+      dplyr::filter(Year != lubridate::year(Sys.Date())) |>
+      dplyr::summarise(
+        total_samples = dplyr::n(),
+        n_below = ifelse(Type == 'Coastal', length(which(DOsat < 42)),
+                         length(which(DOsat < 38)))) |>
+      dplyr::distinct() |>
+      dplyr::mutate(do_grade = ifelse((n_below/total_samples) > 0.1, 'Fail', 'Pass')))
 
   # Calculate the geometric mean exceedence for chl-a, TP, TN, E.coli, and Enterococci
   # and compare to WBID specific FDEP criteria for pass/fail:
   nubact <- data.frame(
     rd |>
       dplyr::mutate(TN = TKN + NOX) |>
-      dplyr::select(Date, WBID, Type,chl_a, TP,TN,E_coli,Enterococci) |>
+      dplyr::select(Date, WBID, Type, chl_a, TP, TN, E_coli, Enterococci) |>
       dplyr::group_by(Year = lubridate::year(Date), WBID, Type) |>
-      dplyr::summarise(dplyr::across(c(chl_a,TP,TN,E_coli,Enterococci), \(.)
+      dplyr::summarise(dplyr::across(c(chl_a, TP, TN, E_coli, Enterococci), \(.)
                                      psych::geometric.mean(., na.rm = TRUE))) |>
-      
       # dplyr::summarise(if(wqShp$WBID[wqShp$ID == site()] %in% c('1558I','1558H','1558H2','1558G','1558F',
       #                                      1661,'1528A','1558N','1694A','1694B','1618C'))
       #   dplyr::across(chl_a),mean,na.rm=TRUE) |>
       dplyr::mutate(
-        chl_grade = ifelse(chl_a >= wCrit$chla_crit[wCrit$WBID == WBID],'Fail','Pass'),
-        tp_grade = ifelse(TP >= wCrit$TP_crit[wCrit$WBID == WBID],'Fail','Pass'),
-        tn_grade = ifelse(TN >= wCrit$TN_crit[wCrit$WBID == WBID],'Fail','Pass'),
-        ecoli_grade = ifelse(E_coli >= wCrit$Ecoli_crit[wCrit$WBID == WBID],'Fail','Pass'),
+        chl_grade    = ifelse(chl_a >= wCrit$chla_crit[wCrit$WBID == WBID], 'Fail', 'Pass'),
+        tp_grade     = ifelse(TP >= wCrit$TP_crit[wCrit$WBID == WBID],'Fail','Pass'),
+        tn_grade     = ifelse(TN >= wCrit$TN_crit[wCrit$WBID == WBID],'Fail','Pass'),
+        ecoli_grade  = ifelse(E_coli >= wCrit$Ecoli_crit[wCrit$WBID == WBID],'Fail','Pass'),
         entero_grade = ifelse(Enterococci >= wCrit$Entero_crit[wCrit$WBID == WBID],'Fail','Pass')) |>
       dplyr::filter(Year != lubridate::year(Sys.Date()))
     )
 
   # Combine the DO and nutrient exceedence data:
   rc <- dplyr::bind_cols(do, nubact) |>
-    dplyr::select(Year = 'Year...1',`Chlorophyll-a` = chl_grade, 
+    dplyr::select(Year = 'Year...1', `Chlorophyll-a` = chl_grade, 
                   `Dissolved Oxygen` = do_grade, `Total Phosphorus` = tp_grade,
                   `Total Nitrogen` = tn_grade, `E. coli` = ecoli_grade,
                   Enterococci = entero_grade) |>
@@ -737,48 +784,49 @@ rcd <- reactive({
     dplyr::mutate(across(everything(), ~replace(., is.na(.), ''))) |>
     dplyr::filter(Year >= input$year[1] & Year <= input$year[2])
   
-  title <- paste('Water Quality Report Card for', 
-                                             stringr::str_to_title(site()), 'Watershed')
+  # Title for WBID-specific report card table:
+  title <- paste('Water Quality Report Card for', stringr::str_to_title(site()), 
+                 'Watershed')
 
   # Create the table:
   plotly::plot_ly(
-  type = 'table',
-  header = list(
-    values = names(rc),
-    line = list(color = 'white'),
-    fill = list(color = '#BCBCBC'),
-    align = 'center',
-    font = list(color = 'white', size = 11),
-    height = 20,
-    width = 25),
-  cells = list(
-    values = rbind(rc$Year, rc$`Chlorophyll-a`, rc$`Dissolved Oxygen`, 
-                   rc$`Total Phosphorus`, rc$`Total Nitrogen`, rc$`E. coli`,
-                   rc$Enterococci),
-    line = list(color = 'black'),
-    fill = list(color = rbind(
-      rep('white', length(rc$Year)),
-      ifelse(rc$`Chlorophyll-a` == "Pass", "#c6e0b4", 
-             ifelse(rc$`Chlorophyll-a` == "Fail", "#f4b084", "white")),
-      ifelse(rc$`Dissolved Oxygen` == "Pass", "#c6e0b4", 
-             ifelse(rc$`Dissolved Oxygen` == "Fail", "#f4b084", "white")),
-      ifelse(rc$`Total Phosphorus` == "Pass", "#c6e0b4", 
-             ifelse(rc$`Total Phosphorus` == "Fail", "#f4b084", "white")),
-      ifelse(rc$`Total Nitrogen` == "Pass", "#c6e0b4", 
-             ifelse(rc$`Total Nitrogen` == "Fail", "#f4b084", "white")),
-      ifelse(rc$`E. coli` == "Pass", "#c6e0b4", 
-             ifelse(rc$`E. coli` == "Fail", "#f4b084", "white")),
-      ifelse(rc$Enterococci == "Pass", "#c6e0b4", 
-             ifelse(rc$Enterococci == "Fail", "#f4b084", "white")))),
-    align = 'center',
-    font = list(color = 'black', size = 11),
-    height = 21)) |>
+    type = 'table',
+    header = list(
+      values = names(rc),
+      line = list(color = 'white'),
+      fill = list(color = '#BCBCBC'),
+      align = 'center',
+      font = list(color = 'white', size = 11),
+      height = 20,
+      width = 25),
+    cells = list(
+      values = rbind(rc$Year, rc$`Chlorophyll-a`, rc$`Dissolved Oxygen`, 
+                     rc$`Total Phosphorus`, rc$`Total Nitrogen`, rc$`E. coli`,
+                     rc$Enterococci),
+      line = list(color = 'black'),
+      fill = list(color = rbind(
+        rep('white', length(rc$Year)),
+        ifelse(rc$`Chlorophyll-a` == "Pass", "#c6e0b4", 
+         ifelse(rc$`Chlorophyll-a` == "Fail", "#f4b084", "white")),
+        ifelse(rc$`Dissolved Oxygen` == "Pass", "#c6e0b4", 
+         ifelse(rc$`Dissolved Oxygen` == "Fail", "#f4b084", "white")),
+        ifelse(rc$`Total Phosphorus` == "Pass", "#c6e0b4", 
+         ifelse(rc$`Total Phosphorus` == "Fail", "#f4b084", "white")),
+        ifelse(rc$`Total Nitrogen` == "Pass", "#c6e0b4", 
+         ifelse(rc$`Total Nitrogen` == "Fail", "#f4b084", "white")),
+        ifelse(rc$`E. coli` == "Pass", "#c6e0b4", 
+         ifelse(rc$`E. coli` == "Fail", "#f4b084", "white")),
+        ifelse(rc$Enterococci == "Pass", "#c6e0b4", 
+         ifelse(rc$Enterococci == "Fail", "#f4b084", "white")))),
+      align = 'center',
+      font = list(color = 'black', size = 11),
+      height = 21)) |>
     plotly::layout(
       title = list(text = title,
-                   font = list(size = 120/sqrt(nchar(title))),
+                   font = list(size = 120 / sqrt(nchar(title))),
                    y = 0.985)
       )
-})
+  })
 
  # display table
  fillCol(flex = 1,
@@ -813,24 +861,22 @@ tags$script("
   });
 ")
 
-
-
 # Gauge plot colors:
 cls = c('green','yellow','red')
 
 # Gauge plot for DO displays most recent value:
 output$DOg <- highcharter::renderHighchart({
   gauge(
-    data = dplyr::select(getData(), Date, DO),
-    var = 'Dissolved Oxygen',
-    unit='%',
-    max= 100, 
-    g1 = wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+    data  = dplyr::select(getData(), Date, DO),
+    var   = 'Dissolved Oxygen',
+    unit  = '%',
+    max   = 100, 
+    g1    = wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
     round = 1,
     width = input$screen_width, 
-    g2=100,
-    r1=0,
-    r2=wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]])
+    g2    = 100,
+    r1    = 0,
+    r2    = wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]])
 })  
 
 # Gauge plot for Chl-a displays most recent value:
@@ -981,10 +1027,10 @@ Red Tide
 
 ```{r}
 # Initialize a reactive value to track if a water quality subtab has been clicked yet:
-click <- reactiveVal(TRUE)
+click2 <- reactiveVal(TRUE)
 
 # UI for the initial informational popup:
-txt <- modalDialog(
+Rtxt <- modalDialog(
   title = "NAVIGATING THE RED TIDE DATA PAGE",
   HTML("<i>*Note: if the red tide map does not appear to be working properly, please try refreshing the page.</i>"),
   tags$p(""),
@@ -1008,9 +1054,9 @@ txt <- modalDialog(
 
 # Make sure initial info popup only displayed once and not again after subtab click:
 observeEvent(input$active_tab, {
-  if (input$active_tab == "Red Tide" & click()) {
-    showModal(txt)
-    click(FALSE) 
+  if (input$active_tab == "Red Tide" & click2()) {
+    showModal(Rtxt)
+    click2(FALSE) 
   }
 })
 ```
