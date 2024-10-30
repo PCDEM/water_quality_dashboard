@@ -253,7 +253,7 @@ observeEvent(input$mapplo_shape_click, {
 # Get the name of the WBID clicked by the user:
 site <- reactive({
   if(is.null(input$mapplo_shape_click)){
-    sName <- '1474'
+    sName <- '1486A'
   } else {
     sName <- getStrata(
       spDat = wqShp,
@@ -387,10 +387,11 @@ Sinf <- function(site){
   if (Sw %in% c('1528A','1694B','1694A','1558N')) bcb(input, 'info',site)
   if (Sw %in% c(1529, 1530, 1550, 1614, 1683, 1696, 1700, '1541B', '1530A',
                 '1541C', '1603B', '1603D', '1574A', '1567C', '1662A', '1618D',
-                '1668B', '1668D', '1558C', '1558B', '1709D', '1709F', '1716A',)) 
+                '1668B', '1668D', '1558C', '1558B', '1709D', '1709F', '1716A'))
     tbd(input, 'info')
   if (Sw == 'Not Sampled') noInfo(input, 'info')
   }
+
 
 ```
 
@@ -1022,49 +1023,270 @@ An increase in nutrient levels in the water can can promote the growth of algal 
 The Pass/Fail designation for each parameter is determined by calculating the annual geometric mean and then comparing it to the FDEP standard. If the value exceeds the FDEP standard, the site will get a 'Fail' for that parameter. If the value does not exceed the standard, the site will get a 'Pass'. Visit the FDEP Water Quality Standards [webpage](https://floridadep.gov/DEAR/Water-Quality-Standards){target="_blank"} for more information about specific water quality criteria throughout the state of Florida.
 
 
-Red Tide
+Red Tide & Bacteria
 ===========================================================
 
+## Column {.tabset .tabset-fade data-width="180"}
+
+### Red Tide
+
+Red tide is a natural phenomenon in the waters around Pinellas County, caused by an overgrowth of microscopic algae called *Karenia brevis*. These algae produce toxins that can affect marine life and lead to fish kills, as well as cause respiratory irritation in humans, particularly for those with asthma or other respiratory conditions. It often gives the water a reddish or brownish tint, hence the name "red tide."
+
+While red tide blooms can occur year-round, they are most common in Florida around late summer to early fall. The blooms are driven by a combination of warm water temperatures, nutrient availability, and favorable currents. During red tide events, it’s best to limit beach activities, as the airborne toxins can cause eye, nose, and throat irritation. 
+
+<br>
+<br>
+```{r, fig.align = 'center', out.width = '70%', fig.alt = 'Microscopic image of Karenia brevis'}
+knitr::include_graphics('www/k_brevis.png')
+```
+<br>
+
+
+### Bacteria
+
+*Enterococcus* is a type of bacteria found in water, soil, and the intestines of humans and animals. This bacterium is used as an indicator of water quality at beaches, as high levels can signal contamination from sources like sewage, stormwater runoff, or animal waste. This contamination can pose health risks, as exposure to *Enterococcus* in water can lead to gastrointestinal illness and a variety of infections.
+
+*Enterococcus* levels are regularly monitored to ensure beach safety, as it can indicate fecal pollution in the water. High levels often result from heavy rainfall or stormwater discharge, which can wash contaminants into coastal waters. When *Enterococcus* is elevated, it’s advisable to avoid swimming, particularly for people with open wounds or weakened immune systems. While the bacteria itself is not always harmful, it acts as a warning sign of possible health risks in recreational waters.
+
+
+<br>
+```{r, fig.align = 'center', out.width = '50%', fig.alt = 'Microscopic image of Enterococcus'}
+knitr::include_graphics('www/entero.png')
+```
+<br>
+
+
+
+## Column {.tabset .tabset-fade data-width="310"}
+
+### Red Tide
+
 ```{r}
-# Initialize a reactive value to track if a water quality subtab has been clicked yet:
-click2 <- reactiveVal(TRUE)
+dat <- readxl::read_excel('Data/Pinellas_RedTide_Entero.xlsx') |>
+  dplyr::mutate(`Karenia brevis` = stringr::str_to_title(`Karenia brevis`),
+    Color = ifelse(`Karenia brevis` <= 1000, "#878686",
+                 ifelse(`Karenia brevis` %in% seq(1001,10000), "white", 
+                 ifelse(`Karenia brevis` %in% seq(10001,100000), "yellow",
+                 ifelse(`Karenia brevis` %in% seq(100001,1000000), "orange",
+                 ifelse(`Karenia brevis` > 1000000, "red", "black"))))),
+    bact = ifelse(Enterococcus <= 35, 'green',
+           ifelse(Enterococcus >= 36 & Enterococcus <= 70, 'yellow', 'red')),
+    Date = format(Date, '%m/%d/%Y'))
 
-# UI for the initial informational popup:
-Rtxt <- modalDialog(
-  title = "NAVIGATING THE RED TIDE DATA PAGE",
-  HTML("<i>*Note: if the red tide map does not appear to be working properly, please try refreshing the page.</i>"),
-  tags$p(""),
-  HTML("<b>Getting started:</b>"),
-  tags$p(""),
-  tags$li("View the points on the map to see the most recent red tide status."),
-  tags$p(""),
-  tags$li("The diamond points are sites monitored by Pinellas County."),
-  tags$p(""),
-  tags$li("The circle points are sites monitored by FWC."),
-  br(),
-  HTML("<b>Viewing the data:</b>"),
-  tags$p(""),
-  tags$li("Click any of the points to view more information about that site."),
-  tags$p(""),
-  tags$li("Click the popup arrow at the bottom of the map to view a table of the data."),
-  easyClose = TRUE,
-  footer = modalButton("Close"),
-  style = "font-size:90%"
-)
+rDat <- dat |>
+  dplyr::filter(Date == Date[max(which(!is.na(dat$`Karenia brevis`)))])
 
-# Make sure initial info popup only displayed once and not again after subtab click:
-observeEvent(input$active_tab, {
-  if (input$active_tab == "Red Tide" & click2()) {
-    showModal(Rtxt)
-    click2(FALSE) 
-  }
-})
+eDat <- dat |>
+  dplyr::filter(Date == Date[max(which(!is.na(dat$Enterococcus)))])
+
+
+# Custom legend for WBID types:
+ll <- rep('circle', 5)
+leg2 <- setNames(
+  Map(
+    f              = leaflegend::makeSymbol,
+    shape          = ll,
+    color          = 'black',
+    fillColor      = c('#878686', 'white', 'yellow', 'orange', 'red'),
+    opacity        = 1,
+    fillOpacity    = 0.8,
+    height         = 15,
+    width          = 20,
+    'stroke-width' = 1
+  ), 
+  ll
+) 
+
+
+rtm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.VoyagerLabelsUnder) |>
+  leaflet::setView(
+    lng  = -82.72, 
+    lat  = 27.905, 
+    zoom = 10
+  ) |>
+  leaflet::addCircleMarkers(
+    data = rDat, 
+    lng  = ~Longitude, 
+    lat  = ~Latitude, 
+    color = 'black',
+    radius = 6, 
+    fill = TRUE,
+    fillColor = ~Color, 
+    stroke = TRUE, 
+    weight = 1.5,
+    fillOpacity = 1,
+    label = ~Site,
+    labelOptions = leaflet::labelOptions(
+      textsize = "14px"
+    ),
+    popup = ~paste("<u><b>Red Tide Monitoring</b></u>", "<br>",
+                   "Sample Result: ", `Karenia brevis`,"cells/L","<br>",
+                   "Location: ", Site, "<br>",
+                   "Sample Date: ", Date
+  )) |>
+  leaflegend::addLegendImage(
+    images      = leg2,
+    labels      = c('Not Present/Background (0-1,000)', 'Very Low (>1,000-10,000)', 
+                    'Low (>10,000-100,000)', 'Medium (>100,000-1,000,000)', 
+                    'High (>1,000,000)'),
+    labelStyle  = "font-size: 14px;",
+    width       = 23,
+    height      = 18,
+    orientation = 'vertical',
+    title = htmltools::tags$div(tags$em('Karenia brevis'),'(cells/L)',
+                                style = 'font-size: 20px; text-align: center;
+                                font-weight: bold;'),
+    position = 'topright'
+  ) |>
+  leaflet::addScaleBar(
+    position = 'bottomleft'
+    ) |>
+    leaflet::addControl(
+    html = paste("<div style='font-size: 20px; color: red; font-weight: bold;'>Most recent sample:",unique(rDat$Date),"</div>"),
+    position = "topleft"
+  ) 
+
+rtmap <- leaflet::leafletProxy('rtmap')
+
+
+output$rtmap <- leaflet::renderLeaflet(rtm)
+
+# Display the map and info button:
+fillCol(flex = 1,
+        leaflet::leafletOutput('rtmap'))
+
+  
 ```
 
 
 
-<iframe width="100%" height="100%" src="https://www.arcgis.com/apps/webappviewer/index.html?id=7c18e5858be14368a660bda35f4acc68">
-</iframe>
+## Column {.tabset .tabset-fade data-width="310"}
+
+### Bacteria
+
+```{r}
+# Custom legend for WBID types:
+ll2 <- rep('circle', 3)
+leg3 <- setNames(
+  Map(
+    f              = leaflegend::makeSymbol,
+    shape          = ll2,
+    color          = 'black',
+    fillColor      = c('green','yellow','red'),
+    opacity        = 1,
+    fillOpacity    = 0.8,
+    height         = 15,
+    width          = 20,
+    'stroke-width' = 1
+  ), 
+  ll2
+) 
+
+
+bm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.VoyagerLabelsUnder) |>
+  leaflet::setView(
+    lng  = -82.72, 
+    lat  = 27.905, 
+    zoom = 10
+  ) |>
+  leaflet::addCircleMarkers(
+    data = eDat,
+    lng  = ~Longitude,
+    lat  = ~Latitude,
+    color = 'black',
+    radius = 6,
+    fill = TRUE,
+    fillColor = ~bact,
+    stroke = TRUE,
+    weight = 1.5,
+    fillOpacity = 1,
+    label = ~Site,
+    labelOptions = leaflet::labelOptions(
+      textsize = "14px"
+    ),
+    popup = ~paste("<u><b>Bacteria Monitoring (Enterococcus)</b></u>", "<br>",
+                   "Sample Result: ", Enterococcus, "MPN/100mL","<br>",
+                   "Location: ", Site, "<br>",
+                   "Sample Date: ", Date)
+    ) |>
+  leaflegend::addLegendImage(
+    images      = leg3,
+    labels      = c('Good (<35)','Moderate (36-70)', 'Poor (>70)'),
+    labelStyle  = "font-size: 14px;",
+    width       = 23,
+    height      = 18,
+    orientation = 'vertical',
+    title = htmltools::tags$div(tags$em('Enterococcus'), '(MPN/100mL)',
+                                style = 'font-size: 20px; text-align: center;
+                                font-weight: bold;'),
+    position = 'topright'
+  ) |>
+  leaflet::addScaleBar(
+    position = 'bottomleft'
+    ) |>
+    leaflet::addControl(
+    html = paste("<div style='font-size: 20px; color: red; font-weight: bold;'>Most recent sample:",unique(eDat$Date),"</div>"),
+    position = "topleft"
+  ) 
+
+bmap <- leaflet::leafletProxy('bmap')
+
+
+output$bmap <- leaflet::renderLeaflet(bm)
+
+# Display the map and info button:
+fillCol(flex = 1,
+        leaflet::leafletOutput('bmap'))
+
+```
+
+
+
+<!-- Red Tide -->
+<!-- =========================================================== -->
+
+<!-- ```{r} -->
+<!-- # Initialize a reactive value to track if a water quality subtab has been clicked yet: -->
+<!-- click2 <- reactiveVal(TRUE) -->
+
+<!-- # UI for the initial informational popup: -->
+<!-- Rtxt <- modalDialog( -->
+<!--   title = "NAVIGATING THE RED TIDE DATA PAGE", -->
+<!--   HTML("<i>*Note: if the red tide map does not appear to be working properly, please try refreshing the page.</i>"), -->
+<!--   tags$p(""), -->
+<!--   HTML("<b>Getting started:</b>"), -->
+<!--   tags$p(""), -->
+<!--   tags$li("View the points on the map to see the most recent red tide status."), -->
+<!--   tags$p(""), -->
+<!--   tags$li("The diamond points are sites monitored by Pinellas County."), -->
+<!--   tags$p(""), -->
+<!--   tags$li("The circle points are sites monitored by FWC."), -->
+<!--   br(), -->
+<!--   HTML("<b>Viewing the data:</b>"), -->
+<!--   tags$p(""), -->
+<!--   tags$li("Click any of the points to view more information about that site."), -->
+<!--   tags$p(""), -->
+<!--   tags$li("Click the popup arrow at the bottom of the map to view a table of the data."), -->
+<!--   easyClose = TRUE, -->
+<!--   footer = modalButton("Close"), -->
+<!--   style = "font-size:90%" -->
+<!-- ) -->
+
+<!-- # Make sure initial info popup only displayed once and not again after subtab click: -->
+<!-- observeEvent(input$active_tab, { -->
+<!--   if (input$active_tab == "Red Tide" & click2()) { -->
+<!--     showModal(Rtxt) -->
+<!--     click2(FALSE)  -->
+<!--   } -->
+<!-- }) -->
+<!-- ``` -->
+
+
+
+<!-- <iframe width="100%" height="100%" src="https://www.arcgis.com/apps/webappviewer/index.html?id=7c18e5858be14368a660bda35f4acc68"> -->
+<!-- </iframe> -->
 
 
 
