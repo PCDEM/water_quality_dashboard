@@ -428,18 +428,22 @@ This dashboard is designed to make the Division’s (PCDEM) monitoring results a
 This dashboard provides several types of data for exploration, including:
 
 1) [__Water Quality__](#water-quality): Water quality data from monitoring sites throughout Pinellas County.
-1) [__Red Tide__](#red-tide): Current Pinellas County red tide data.
+1) [__Red Tide & Bacteria__](#red-tide-bacteria): Current Pinellas County red tide and beach bacteria data.
 1) [__Annual Report__](#annual-report): Annual report summarizing water quality and habitat monitoring data
 1) [__Data Downloads__](#data-downloads): Downloadable water quality data.
 
-The page source content can be viewed on [Github](https://github.com/PCDEM){target="_blank"}.
+<br>
 
-Technical questions about water quality data can be sent to [Stacey Day](mailto:sday@pinellas.gov). Questions and comments about the dashboard can be sent to [Alex Manos](mailto:almanos@pinellas.gov).
+The source content for this dashboard can be viewed on [Github](https://github.com/PCDEM){target="_blank"}.
+
+Technical questions about our water quality data can be sent to [Stacey Day](mailto:sday@pinellas.gov). 
+<br>
+Questions and comments about the dashboard can be sent to [Alex Manos](mailto:almanos@pinellas.gov).
 
 <br/><br/>
 
 ```{r, echo = FALSE, out.width = '60%', fig.align = 'center', fig.alt='County staff collecting data',fig.cap='Pinellas County staff conducting various types of environmental monitoring activities.'}
-# knitr::include_graphics('www/collage2.png')
+knitr::include_graphics('www/collage.png')
 ```
 
 </div>
@@ -1046,7 +1050,7 @@ knitr::include_graphics('www/k_brevis.png')
 
 *Enterococcus* is a type of bacteria found in water, soil, and the intestines of humans and animals. This bacterium is used as an indicator of water quality at beaches, as high levels can signal contamination from sources like sewage, stormwater runoff, or animal waste. This contamination can pose health risks, as exposure to *Enterococcus* in water can lead to gastrointestinal illness and a variety of infections.
 
-*Enterococcus* levels are regularly monitored to ensure beach safety, as it can indicate fecal pollution in the water. High levels often result from heavy rainfall or stormwater discharge, which can wash contaminants into coastal waters. When *Enterococcus* is elevated, it’s advisable to avoid swimming, particularly for people with open wounds or weakened immune systems. While the bacteria itself is not always harmful, it acts as a warning sign of possible health risks in recreational waters.
+High levels of *Enterococcus* can be the result of heavy rainfall or stormwater discharge, which can wash contaminants into coastal waters. When *Enterococcus* is elevated, it’s advisable to avoid swimming, particularly for people with open wounds or weakened immune systems. While Pinellas County collects this data to inform the public about water quality issues, the [FL Department of Health](https://www.floridahealth.gov/environmental-health/beach-water-quality/county-detail.html?County=Pinellas&Zip=33701-3109) remains the official source for updates and advisories about beach conditions and water safety 
 
 
 <br>
