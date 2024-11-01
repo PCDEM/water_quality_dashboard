@@ -4,7 +4,7 @@ output:
   flexdashboard::flex_dashboard:
     logo: www/logo.png
     social: menu
-    source_code: https://github.com/PCDEM
+    source_code: https://github.com/PCDEM/water_quality_dashboard
     includes:
       in_header: "google-analytics.html"
 runtime: shiny
@@ -32,7 +32,9 @@ source('R/funcs.R')
 ```{r data handling, include=FALSE}
 
 # Import water quality data:
-wqIn <- readxl::read_excel("Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx", 
+# wqIn <- readxl::read_excel("Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx", 
+#                            guess_max = 50000)
+wqIn <- readxl::read_excel("Data/New_Data.xlsx", 
                            guess_max = 50000)
 
 # Import FDEP WBID water quality thresholds (some of the WBID names may not exactly
@@ -44,19 +46,19 @@ wCrit <- readxl::read_excel('Data/WBID_criteria.xlsx', sheet = 'Criteria')
 # Calculate means for parameters and keep only surface level data (those are the 
 # data used to generate plots in the dashboard):
 wqM <- wqIn |>
-  dplyr::filter(Level == 'Surface') |>
+  # dplyr::filter(Level == 'Surface') |>
   dplyr::mutate(TN = TKN + NOX) |>
   dplyr::group_by(WBID, Date, Segment,Type) |>
   dplyr::summarise(
-            DO        = mean_n(`DO%`),
+            DO        = mean_n(`DO%_avg`),
             chl_a     = mean_n(`Chl-a`),
             TN        = mean_n(TN),
             TP        = mean_n(TP),
             TSS       = mean_n(TSS),
             Turbidity = mean_n(Turbidity),
             Secchi    = mean_n(Secchi),
-            Temp      = mean_n(Temp_Water),
-            Salinity  = mean_n(Salinity),
+            Temp      = mean_n(Temp_Water_avg),
+            Salinity  = mean_n(Salinity_avg),
             Ecoli     = mean_n(E_coli),
             Entero    = mean_n(Enterococci)
             ) |>
@@ -735,8 +737,8 @@ rcd <- reactive({
   rd <- data.frame(
     wqIn |>
       dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()]) |>
-      dplyr::select(Date, WBID, Type, Level, chl_a = `Chl-a`, chla_q = `Chla_q`,
-                    DOsat = `DO%`, DOsat_q = `DO%_q`, TKN, TKN_q, NOX, NOX_q, 
+      dplyr::select(Date, WBID, Type, chl_a = `Chl-a`, chla_q = `Chla_q`,
+                    DOsat = `DO%_avg`, DOsat_q = `DO%_q`, TKN, TKN_q, NOX, NOX_q, 
                     TP, TP_q, E_coli, Eco_q, Enterococci, EC_q)) |>
     dplyr::group_by(Date,WBID,Type) |>
     dplyr::summarise_if(is.numeric, mean, na.rm = TRUE)
@@ -1050,7 +1052,7 @@ knitr::include_graphics('www/k_brevis.png')
 
 *Enterococcus* is a type of bacteria found in water, soil, and the intestines of humans and animals. This bacterium is used as an indicator of water quality at beaches, as high levels can signal contamination from sources like sewage, stormwater runoff, or animal waste. This contamination can pose health risks, as exposure to *Enterococcus* in water can lead to gastrointestinal illness and a variety of infections.
 
-High levels of *Enterococcus* can be the result of heavy rainfall or stormwater discharge, which can wash contaminants into coastal waters. When *Enterococcus* is elevated, it’s advisable to avoid swimming, particularly for people with open wounds or weakened immune systems. While Pinellas County collects this data to inform the public about water quality issues, the [FL Department of Health](https://www.floridahealth.gov/environmental-health/beach-water-quality/county-detail.html?County=Pinellas&Zip=33701-3109) remains the official source for updates and advisories about beach conditions and water safety 
+High levels of *Enterococcus* can be the result of heavy rainfall or stormwater discharge, which can wash contaminants into coastal waters. When *Enterococcus* is elevated, it’s advisable to avoid swimming, particularly for people with open wounds or weakened immune systems. While Pinellas County collects this data to inform the public about water quality issues, the [FL Department of Health](https://www.floridahealth.gov/environmental-health/beach-water-quality/county-detail.html?County=Pinellas&Zip=33701-3109) remains the official source for updates and advisories about beach conditions and water safety.
 
 
 <br>
@@ -1365,7 +1367,7 @@ output$datSel <- downloadHandler(
 # Data download button:
 fillCol(flex = c(0.06,0.05, 1),
   shinyWidgets::downloadBttn('datFull', paste0('Download Period of Record Data (',
-                                              round(file.size('Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx')/(1024^2),1),' Mb)'), 
+                                              round(file.size('Data/New_Data.xlsx')/(1024^2),1),' Mb)'), 
                              style = 'simple', block = TRUE, color = 'success'),
   shinyWidgets::downloadBttn('datSel', 'Download Selected Site Data', 
                              style = 'simple', block = TRUE, color = 'success'),
