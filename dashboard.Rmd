@@ -727,7 +727,7 @@ observe({
                 ifelse(max(lubridate::year(getData()$Date)) == lubridate::year(Sys.Date()),
                        max(lubridate::year(getData()$Date))-1,
                        max(lubridate::year(getData()$Date))))
-                      )
+      )
   })
 
 # WBID specific pass/fail summary:
@@ -740,7 +740,7 @@ rcd <- reactive({
       dplyr::select(Date, WBID, Type, chl_a = `Chl-a`, chla_q = `Chla_q`,
                     DOsat = `DO%_avg`, DOsat_q = `DO%_q`, TKN, TKN_q, NOX, NOX_q, 
                     TP, TP_q, E_coli, Eco_q, Enterococci, EC_q)) |>
-    dplyr::group_by(Date,WBID,Type) |>
+    dplyr::group_by(Date, WBID, Type) |>
     dplyr::summarise_if(is.numeric, mean, na.rm = TRUE)
 
     # Remove data if it has certain qualifiers associated with it:
@@ -758,7 +758,8 @@ rcd <- reactive({
         n_below = ifelse(Type == 'Coastal', length(which(DOsat < 42)),
                          length(which(DOsat < 38)))) |>
       dplyr::distinct() |>
-      dplyr::mutate(do_grade = ifelse((n_below/total_samples) > 0.1, 'Fail', 'Pass')))
+      dplyr::mutate(do_grade = ifelse((n_below/total_samples) > 0.1, 'Fail', 'Pass'))
+    )
 
   # Calculate the geometric mean exceedence for chl-a, TP, TN, E.coli, and Enterococci
   # and compare to WBID specific FDEP criteria for pass/fail:
@@ -797,16 +798,16 @@ rcd <- reactive({
 
   # Create the table:
   plotly::plot_ly(
-    type = 'table',
+    type   = 'table',
     header = list(
       values = names(rc),
-      line = list(color = 'white'),
-      fill = list(color = '#BCBCBC'),
-      align = 'center',
-      font = list(color = 'white', size = 11),
+      line   = list(color = 'white'),
+      fill   = list(color = '#BCBCBC'),
+      align  = 'center',
+      font   = list(color = 'white', size = 11),
       height = 20,
-      width = 25),
-    cells = list(
+      width  = 25),
+    cells  = list(
       values = rbind(rc$Year, rc$`Chlorophyll-a`, rc$`Dissolved Oxygen`, 
                      rc$`Total Phosphorus`, rc$`Total Nitrogen`, rc$`E. coli`,
                      rc$Enterococci),
@@ -825,8 +826,8 @@ rcd <- reactive({
          ifelse(rc$`E. coli` == "Fail", "#f4b084", "white")),
         ifelse(rc$Enterococci == "Pass", "#c6e0b4", 
          ifelse(rc$Enterococci == "Fail", "#f4b084", "white")))),
-      align = 'center',
-      font = list(color = 'black', size = 11),
+      align  = 'center',
+      font   = list(color = 'black', size = 11),
       height = 21)) |>
     plotly::layout(
       title = list(text = title,
@@ -837,7 +838,7 @@ rcd <- reactive({
 
  # display table
  fillCol(flex = 1,
-       plotly::renderPlotly(rcd()))
+         plotly::renderPlotly(rcd()))
  
 ```
 
@@ -878,93 +879,178 @@ output$DOg <- highcharter::renderHighchart({
     var   = 'Dissolved Oxygen',
     unit  = '%',
     max   = 100, 
-    g1    = wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
     round = 1,
-    width = input$screen_width, 
+    g1    = wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
     g2    = 100,
     r1    = 0,
-    r2    = wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]])
-})  
+    r2    = wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+    width = input$screen_width
+    )
+  })  
 
 # Gauge plot for Chl-a displays most recent value:
 output$chlg <- highcharter::renderHighchart({
-  gauge(data = dplyr::select(getData(), Date, chl_a), var = 'Chlorophyll-a',unit=' µg/L',
-        max = 40,g1=0,g2=wCrit$chla_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        round=1, width = input$screen_width,
-        r1=wCrit$chla_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        r2=40)
-})
+  gauge(
+    data  = dplyr::select(getData(), Date, chl_a), 
+    var   = 'Chlorophyll-a',
+    unit  = ' µg/L',
+    max   = 40,
+    round = 1,
+    g1    = 0,
+    g2    = wCrit$chla_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+    r1    = wCrit$chla_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+    r2    = 40,
+    width = input$screen_width
+    )
+  })
 
 # Gauge plot for TN displays most recent value:
 output$TNg <- highcharter::renderHighchart({
-  gauge(data = dplyr::select(getData(), Date, TN), var = 'Total Nitrogen',unit=' mg/L',
-        max = 3,g1=0,g2=wCrit$TN_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        round=2, width = input$screen_width,
-        r1=wCrit$TN_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        r2=3)
-})
+  gauge(
+    data  = dplyr::select(getData(), Date, TN), 
+    var   = 'Total Nitrogen',
+    unit  = ' mg/L',
+    max   = 3,
+    round = 2, 
+    g1    = 0,
+    g2    = wCrit$TN_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+    r1    = wCrit$TN_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+    r2    = 3,
+    width = input$screen_width
+    )
+  })
 
 # Gauge plot for TP displays most recent value:
 output$TPg <- highcharter::renderHighchart({
-  gauge(data = dplyr::select(getData(), Date, TP), var = 'Total Phosphorus',unit=' mg/L',
-        max = 0.6,g1=0,g2=wCrit$TP_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        round=2, width = input$screen_width,
-        r1=wCrit$TP_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        r2=1)
-})
+  gauge(
+    data  = dplyr::select(getData(), Date, TP), 
+    var   = 'Total Phosphorus',
+    unit  = ' mg/L',
+    max   = 0.6,
+    round = 2, 
+    g1    = 0,
+    g2    = wCrit$TP_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+    r1    = wCrit$TP_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+    r2    = 1,
+    width = input$screen_width
+    )
+  })
 
 # Gauge plot for TSS displays most recent value:
 output$TSSg <- highcharter::renderHighchart({
-  gauge(data = dplyr::select(getData(), Date, TSS), var = 'Total Suspended Solids',unit=' mg/L',
-        max = 16,g1=0,g2=16,round=2, width = input$screen_width , r1=0,r2=0)
-})
+  gauge(
+    data  = dplyr::select(getData(), Date, TSS), 
+    var   = 'Total Suspended Solids',
+    unit  = ' mg/L',
+    max   = 16,
+    round = 2, 
+    g1    = 0,
+    g2    = 16,
+    r1    = 0,
+    r2    = 0,
+    width = input$screen_width
+    )
+  })
 
 # Gauge plot for turbidity displays most recent value:
-output$Turg <- highcharter::renderHighchart({
-  gauge(data = dplyr::select(getData(), Date, Turbidity), var = 'Turbidity',unit=' NTU',
-        max = 20,g1=0,g2=20,round=2, r1=0, r2=0, width = input$screen_width )
-})
+output$Turb <- highcharter::renderHighchart({
+  gauge(
+    data  = dplyr::select(getData(), Date, Turbidity), 
+    var   = 'Turbidity',
+    unit  = ' NTU',
+    max   = 20,
+    round = 2, 
+    g1    = 0,
+    g2    = 20,
+    r1    = 0,
+    r2    = 0,
+    width = input$screen_width
+    )
+  })
 
 # Gauge plot for secchi displays most recent value:
 output$Secg <- highcharter::renderHighchart({
-  gauge(data = dplyr::select(getData(), Date, Secchi), var = 'Secchi Depth',unit=' m',
-        max = 4,g1=0,g2=4,round=2,r1=0,r2=0, width = input$screen_width )
-})
+  gauge(
+    data  = dplyr::select(getData(), Date, Secchi), 
+    var   = 'Secchi Depth',
+    unit  = ' m',
+    max   = 4,
+    round = 2, 
+    g1    = 0,
+    g2    = 4,
+    r1    = 0,
+    r2    = 0,
+    width = input$screen_width
+    )
+  })
 
 # Gauge plot for temperature displays most recent value:
 output$Tg <- highcharter::renderHighchart({
-  gauge(data = dplyr::select(getData(), Date, Temp), var = 'Temperature',unit='°C',
-        max = 30,g1=0,g2=30,round=2,r1=0,r2=0, width = input$screen_width )
-})
+  gauge(
+    data  = dplyr::select(getData(), Date, Temp), 
+    var   = 'Temperature',
+    unit  = '°C',
+    max   = 30,
+    round = 2, 
+    g1    = 0,
+    g2    = 30,
+    r1    = 0,
+    r2    = 0,
+    width = input$screen_width
+    )
+  })
 
 # Gauge plot for salinity displays most recent value:
 output$Sg <- highcharter::renderHighchart({
-  gauge(data = dplyr::select(getData(), Date, Salinity), var = 'Salinity',unit=' ppt',
-        max = 30,g1=0,g2=30,round=2,r1=0,r2=0, width = input$screen_width)
-})
+  gauge(
+    data  = dplyr::select(getData(), Date, Salinity), 
+    var   = 'Salinity',
+    unit  = ' ppt',
+    max   = 30,
+    round = 2, 
+    g1    = 0,
+    g2    = 30,
+    r1    = 0,
+    r2    = 0,
+    width = input$screen_width
+    )
+  })
 
 # Gauge plot for E. coli displays most recent value:
 output$eg <- highcharter::renderHighchart({
-  gauge(data = dplyr::select(getData(), Date, Ecoli), var = HTML('<em>E. coli</em>'),unit=' MPN/100mL',
-        max = 1000,g1=0,g2=wCrit$Ecoli_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        round=0, width = input$screen_width,
-        r1=wCrit$Ecoli_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        r2=1000)
-})
+  gauge(
+    data  = dplyr::select(getData(), Date, Ecoli), 
+    var   = HTML('<em>E. coli</em>'),
+    unit  = ' MPN/100mL',
+    max   = 1000,
+    round = 0, 
+    g1    = 0,
+    g2    = wCrit$Ecoli_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+    r1    = wCrit$Ecoli_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+    r2    = 1000,
+    width = input$screen_width
+    )
+  })
 
 # Gauge plot for Enterococci displays most recent value:
 output$entg <- highcharter::renderHighchart({
-  gauge(data = dplyr::select(getData(), Date, Entero), var = HTML('<em>Enterococci</em>'),unit=' MPN/100mL',
-        max = 1000,g1=0,g2=wCrit$Entero_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        round=0, width = input$screen_width,
-        r1=wCrit$Entero_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
-        r2=1000)
-})
+  gauge(
+    data  = dplyr::select(getData(), Date, Entero), 
+    var   = HTML('<em>Enterococci</em>'),
+    unit  = ' MPN/100mL',
+    max   = 1000,
+    round = 0, 
+    g1    = 0,
+    g2    = wCrit$Entero_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+    r1    = wCrit$Entero_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]],
+    r2    = 1000,
+    width = input$screen_width
+    )
+  })
 
 # Allows for intial gauge render when first navigating to water quality tab from
 # overview page:
 renderG <- reactiveVal(TRUE)
-
 
 # Obtain the active tab name from JavaScript code and update the gauge plots:
 observeEvent(input$active_tab, {
@@ -981,7 +1067,7 @@ observeEvent(input$active_tab, {
     output$gaugePlots <- renderUI({
       fillCol(flex = c(1, rep(1,3)),
         highcharter::highchartOutput("TSSg"),
-        highcharter::highchartOutput("Turg"),
+        highcharter::highchartOutput("Turb"),
         highcharter::highchartOutput("Secg")
       )
     })
@@ -1016,7 +1102,6 @@ observeEvent(input$active_tab, {
 
 # Display the gauge plots:
 uiOutput("gaugePlots")
-
 
 ```
 
@@ -1068,6 +1153,8 @@ knitr::include_graphics('www/entero.png')
 ### Red Tide
 
 ```{r}
+
+# Read in red tide and entero data and set limits for color coding:
 dat <- readxl::read_excel('Data/Pinellas_RedTide_Entero.xlsx') |>
   dplyr::mutate(`Karenia brevis` = stringr::str_to_title(`Karenia brevis`),
     Color = ifelse(`Karenia brevis` <= 1000, "#878686",
@@ -1079,14 +1166,16 @@ dat <- readxl::read_excel('Data/Pinellas_RedTide_Entero.xlsx') |>
            ifelse(Enterococcus >= 36 & Enterococcus <= 70, 'yellow', 'red')),
     Date = format(Date, '%m/%d/%Y'))
 
+# Get the most recent data for red tide and bacteria:
 rDat <- dat |>
   dplyr::filter(Date == Date[max(which(!is.na(dat$`Karenia brevis`)))])
 
+# Get the most recent data for bacteria:
 eDat <- dat |>
   dplyr::filter(Date == Date[max(which(!is.na(dat$Enterococcus)))])
 
 
-# Custom legend for WBID types:
+# Custom red tide legend:
 ll <- rep('circle', 5)
 leg2 <- setNames(
   Map(
@@ -1096,14 +1185,14 @@ leg2 <- setNames(
     fillColor      = c('#878686', 'white', 'yellow', 'orange', 'red'),
     opacity        = 1,
     fillOpacity    = 0.8,
-    height         = 15,
-    width          = 20,
+    height         = 10,
+    width          = 15,
     'stroke-width' = 1
   ), 
   ll
 ) 
 
-
+# Make red tide map
 rtm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
   leaflet::addProviderTiles(leaflet::providers$CartoDB.VoyagerLabelsUnder) |>
   leaflet::setView(
@@ -1112,53 +1201,52 @@ rtm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
     zoom = 10
   ) |>
   leaflet::addCircleMarkers(
-    data = rDat, 
-    lng  = ~Longitude, 
-    lat  = ~Latitude, 
-    color = 'black',
-    radius = 6, 
-    fill = TRUE,
-    fillColor = ~Color, 
-    stroke = TRUE, 
-    weight = 1.5,
-    fillOpacity = 1,
-    label = ~Site,
+    data         = rDat, 
+    lng          = ~Longitude, 
+    lat          = ~Latitude, 
+    color        = 'black',
+    radius       = 6, 
+    fill         = TRUE,
+    fillColor    = ~Color, 
+    stroke       = TRUE, 
+    weight       = 1.5,
+    fillOpacity  = 1,
+    label        = ~Site,
     labelOptions = leaflet::labelOptions(
       textsize = "14px"
     ),
     popup = ~paste("<u><b>Red Tide Monitoring</b></u>", "<br>",
                    "Sample Result: ", `Karenia brevis`,"cells/L","<br>",
                    "Location: ", Site, "<br>",
-                   "Sample Date: ", Date
-  )) |>
+                   "Sample Date: ", Date)
+    ) |>
   leaflegend::addLegendImage(
     images      = leg2,
     labels      = c('Not Present/Background (0-1,000)', 'Very Low (>1,000-10,000)', 
                     'Low (>10,000-100,000)', 'Medium (>100,000-1,000,000)', 
                     'High (>1,000,000)'),
-    labelStyle  = "font-size: 14px;",
-    width       = 23,
-    height      = 18,
+    labelStyle  = "font-size: 12px;",
+    width       = 20,
+    height      = 15,
     orientation = 'vertical',
     title = htmltools::tags$div(tags$em('Karenia brevis'),'(cells/L)',
-                                style = 'font-size: 20px; text-align: center;
+                                style = 'font-size: 15px; text-align: center;
                                 font-weight: bold;'),
     position = 'topright'
-  ) |>
+    ) |>
   leaflet::addScaleBar(
     position = 'bottomleft'
     ) |>
     leaflet::addControl(
-    html = paste("<div style='font-size: 20px; color: red; font-weight: bold;'>Most recent sample:",unique(rDat$Date),"</div>"),
+    html = paste("<div style='font-size: 16px; color: red; font-weight: bold;'>Most recent sample:\n",unique(rDat$Date), "</div>"),
     position = "topleft"
   ) 
 
 rtmap <- leaflet::leafletProxy('rtmap')
 
-
 output$rtmap <- leaflet::renderLeaflet(rtm)
 
-# Display the map and info button:
+# Display the red tide map:
 fillCol(flex = 1,
         leaflet::leafletOutput('rtmap'))
 
@@ -1166,13 +1254,12 @@ fillCol(flex = 1,
 ```
 
 
-
 ## Column {.tabset .tabset-fade data-width="310"}
 
 ### Bacteria
 
 ```{r}
-# Custom legend for WBID types:
+# Custom legend for bacteria
 ll2 <- rep('circle', 3)
 leg3 <- setNames(
   Map(
@@ -1189,7 +1276,7 @@ leg3 <- setNames(
   ll2
 ) 
 
-
+# Make bacteria map
 bm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
   leaflet::addProviderTiles(leaflet::providers$CartoDB.VoyagerLabelsUnder) |>
   leaflet::setView(
@@ -1198,17 +1285,17 @@ bm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
     zoom = 10
   ) |>
   leaflet::addCircleMarkers(
-    data = eDat,
-    lng  = ~Longitude,
-    lat  = ~Latitude,
-    color = 'black',
-    radius = 6,
-    fill = TRUE,
-    fillColor = ~bact,
-    stroke = TRUE,
-    weight = 1.5,
-    fillOpacity = 1,
-    label = ~Site,
+    data         = eDat,
+    lng          = ~Longitude,
+    lat          = ~Latitude,
+    color        = 'black',
+    radius       = 6,
+    fill         = TRUE,
+    fillColor    = ~bact,
+    stroke       = TRUE,
+    weight       = 1.5,
+    fillOpacity  = 1,
+    label        = ~Site,
     labelOptions = leaflet::labelOptions(
       textsize = "14px"
     ),
@@ -1220,20 +1307,20 @@ bm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
   leaflegend::addLegendImage(
     images      = leg3,
     labels      = c('Good (<35)','Moderate (36-70)', 'Poor (>70)'),
-    labelStyle  = "font-size: 14px;",
-    width       = 23,
-    height      = 18,
+    labelStyle  = "font-size: 12px;",
+    width       = 20,
+    height      = 15,
     orientation = 'vertical',
     title = htmltools::tags$div(tags$em('Enterococcus'), '(MPN/100mL)',
-                                style = 'font-size: 20px; text-align: center;
+                                style = 'font-size: 15px; text-align: center;
                                 font-weight: bold;'),
     position = 'topright'
-  ) |>
+    ) |>
   leaflet::addScaleBar(
     position = 'bottomleft'
     ) |>
     leaflet::addControl(
-    html = paste("<div style='font-size: 20px; color: red; font-weight: bold;'>Most recent sample:",unique(eDat$Date),"</div>"),
+    html = paste("<div style='font-size: 16px; color: red; font-weight: bold;'>Most recent sample:",unique(eDat$Date),"</div>"),
     position = "topleft"
   ) 
 
@@ -1242,12 +1329,11 @@ bmap <- leaflet::leafletProxy('bmap')
 
 output$bmap <- leaflet::renderLeaflet(bm)
 
-# Display the map and info button:
+# Display the bacteria map:
 fillCol(flex = 1,
         leaflet::leafletOutput('bmap'))
 
 ```
-
 
 
 Annual Report
@@ -1285,22 +1371,23 @@ Data Download
 datWB <- reactive({
   return(dat <- wqIn |>
            dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()]))
-})
+  })
 
 # Create a reactive table:
 tab <- reactive({
   dat <- datWB()
-    out <- reactable::reactable(dat,
-    defaultColDef = reactable::colDef(
-      footerStyle = list(fontWeight = "bold"),
-      format = reactable::colFormat(digits = 2, separators = FALSE),
-      resizable = TRUE
-    ),
-    filterable = TRUE,
-    defaultPageSize = 50
-    )
-  return(out)
-})
+    out <- reactable::reactable(
+      dat,
+      defaultColDef = reactable::colDef(
+        footerStyle = list(fontWeight = "bold"),
+        format      = reactable::colFormat(digits = 2, separators = FALSE),
+        resizable   = TRUE
+        ),
+      filterable = TRUE,
+      defaultPageSize = 50
+      )
+    return(out)
+    })
 
 # Data download:
 output$datFull <- downloadHandler(
@@ -1317,7 +1404,6 @@ output$datSel <- downloadHandler(
   }
 )
 
-
 # Data download button:
 fillCol(flex = c(0.06,0.05, 1),
   shinyWidgets::downloadBttn('datFull', paste0('Download Period of Record Data (',
@@ -1325,9 +1411,7 @@ fillCol(flex = c(0.06,0.05, 1),
                              style = 'simple', block = TRUE, color = 'success'),
   shinyWidgets::downloadBttn('datSel', 'Download Selected Site Data', 
                              style = 'simple', block = TRUE, color = 'success'),
-  # shinyWidgets::downloadBttn('datSel', paste0('Download Selected Site Data (',
-                                              # format(object.size(wqIn), units = "KB"),')'), 
-                             # style = 'simple', block = TRUE, color = 'success'),
   reactable::renderReactable(tab())
   )
+
 ```

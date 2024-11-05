@@ -656,19 +656,29 @@ getStrata <- function(spDat,lat, lng){
 
 # Function to create a plotly plot
 plt <- function(data, var,crit = 0){
-  p <- plotly::plot_ly(data, x = ~Date, y = ~data[,2], type = 'scatter', mode = 'lines+markers',
-                       marker = list(size = 5, color = 'lightblue', line = list(color='black',width = 2)),
-                       line = list(color = 'black'), name = 'Data') |>
-    plotly::layout(yaxis = c(list(linecolor = 'black', linewidth = 0.5, mirror = TRUE),
-                             list(title = list(text = paste0('<b>',var,'<b>'), 
-                                               font = list(size=13)))),
-                   xaxis = list(linecolor = 'black', linewidth = 0.5, mirror = TRUE, title = ""))
+  p <- plotly::plot_ly(
+    data, 
+    x      = ~Date, 
+    y      = ~data[,2], 
+    type   = 'scatter', 
+    mode   = 'lines+markers',
+    marker = list(size = 5, color = 'lightblue', line = list(color='black',width = 2)),
+    line   = list(color = 'black'), 
+    name   = 'Data'
+    ) |>
+    plotly::layout(
+      yaxis = c(list(linecolor = 'black', linewidth = 0.5, mirror = TRUE),
+                list(title = list(text = paste0('<b>', var, '<b>'), font = list(size=13)))),
+      xaxis = list(linecolor = 'black', linewidth = 0.5, mirror = TRUE, title = ""))
   
   if (crit != 0){
     p <- p |>
-      plotly::add_trace(y = crit, mode = 'lines', line = list(color = '#DF5353',
-                                                              dash = 'dash',width = 1.5),
-                        name = 'FDEP\nCriterion', marker = NULL)
+      plotly::add_trace(
+        y = crit, 
+        mode = 'lines', 
+        line = list(color = '#DF5353',dash = 'dash', width = 1.5),
+        name = 'FDEP\nCriterion', 
+        marker = NULL)
   } else {
     p
   }
@@ -684,60 +694,56 @@ plt <- function(data, var,crit = 0){
 #' g2: green band upper limit;
 #' r1: red band lower limit;
 #' r2: red band upper limit;
-#' fs: font size;
 #' width: width of the user screen (obtained from sessionInfo());
-gauge <- function(data,var,unit,max,round,g1,g2,r1,r2,fs,width){
+gauge <- function(data, var, unit, max, round, g1, g2, r1, r2, width){
   chart <- highcharter::highchart() |>
     highcharter::hc_chart(type = "gauge") |>
     highcharter::hc_title(
-      text = HTML('<b>',paste0(var,' (',
-                               format(data[,1][max(which(!is.na(data[,2])))], 
-                                      '%b %Y'),')')), 
-      style = list(fontSize = paste0(width*0.01, "px")),
-      margin = -15) |>
+      text   = HTML('<b>',paste0(var,' (', format(data[,1][max(which(!is.na(data[,2])))], 
+                                                '%b %Y'),')')), 
+      style  = list(fontSize = paste0(width * 0.01, 'px')),
+      margin = -15
+      ) |>
     highcharter::hc_pane(
       startAngle = -110,
-      endAngle = 110) |>
+      endAngle   = 110
+      ) |>
     highcharter::hc_add_series(
-      data = list(data[,2][max(which(!is.na(data[,2])))]),
-      name = var,
-      tooltip = list(valueSuffix = unit),
+      data       = list(data[,2][max(which(!is.na(data[,2])))]),
+      name       = var,
+      tooltip    = list(valueSuffix = unit),
       dataLabels = list(
-        format = paste0('{point.y:.',round,'f}',unit),
-        borderWidth = 0,
-        style = list(fontSize = paste0(width*0.01,'px')),
+        format        = paste0('{point.y:.', round, 'f}', unit),
+        borderWidth   = 0,
+        style         = list(fontSize = paste0(width * 0.01, 'px')),
         verticalAlign = 'top',
-        y = width*0.015
+        y             = width * 0.015
       )
     ) |>
     highcharter::hc_yAxis(
-      min = 0,
-      max = max,
+      min               = 0,
+      max               = max,
       minorTickInterval = "auto",
-      minorTickWidth = 1,
-      minorTickLength = 10,
+      minorTickWidth    = 1,
+      minorTickLength   = 10,
       minorTickPosition = "inside",
-      minorTickColor = "#666",
+      minorTickColor    = "#666",
       tickPixelInterval = 30,
-      tickWidth = 2,
-      tickPosition = "inside",
-      tickLength = 10,
-      tickColor = "#666",
-      labels = list(
-        step = 2
-      ),
+      tickWidth         = 2,
+      tickPosition      = "inside",
+      tickLength        = 10,
+      tickColor         = "#666",
+      labels            = list(step = 2),
       plotBands = list(
-        list(from = g1, to = g2, color = ifelse(nrow(data)==0, 'white',"#55BF3B")),
-        list(from = r1, to = r2, color = ifelse(nrow(data)==0, 'white',"#DF5353"))
-      )
-    ) |>
+        list(from = g1, to = g2, color = ifelse(nrow(data) == 0, 'white', "#55BF3B")),
+        list(from = r1, to = r2, color = ifelse(nrow(data) == 0, 'white', "#DF5353"))
+        )
+      ) |>
     highcharter::hc_plotOptions(
-      gauge = list(
-        wrap = FALSE
+      gauge = list(wrap = FALSE)
       )
-    )
   return(chart)
-}
+  }
 
 # check data availability for plot or retrun message:
 pltmsg <- function(dataFunc, colName, plotFunc) {
