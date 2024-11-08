@@ -757,5 +757,21 @@ pltmsg <- function(dataFunc, colName, plotFunc) {
   })
 }
 
-      
-      
+
+# Custom legend:
+leg <- function(shape, n, colors, fOp, h, w){
+  legnd <- setNames(
+    Map(
+      f              = leaflegend::makeSymbol,
+      shape          = rep(shape, n),
+      color          = 'black',
+      fillColor      = colors,
+      opacity        = 1,
+      fillOpacity    = fOp,
+      height         = h,
+      width          = w,
+      'stroke-width' = 1
+    ),
+    rep(shape,n)
+  )
+}

@@ -64,7 +64,6 @@ wqM <- wqIn |>
             ) |>
   dplyr::ungroup()
 
-
 # Read in Pinellas WBID shapefile and add site type and status. Make the WBIDs
 # around Lakes Seminole and Tarpon non-interactive since they are not sampled
 # and to make the Lakes easier to click:
@@ -139,21 +138,8 @@ for (type in unique(wqShp$Type)) {
   }
 
 # Custom legend for WBID types:
-legShape <- rep('rect', 6)
-leg <- setNames(
-  Map(
-    f              = leaflegend::makeSymbol,
-    shape          = legShape,
-    color          = 'black',
-    fillColor      = c('#00244c', '#6A5ACD', '#40E0D0', '#006400', '#E69F00', '#696969'),
-    opacity        = 1,
-    fillOpacity    = 0.5,
-    height         = 20,
-    width          = 20,
-    'stroke-width' = 1
-    ), 
-  legShape
-  )
+wqLeg <- leg('rect', 6, c('#00244c', '#6A5ACD', '#40E0D0', '#006400', '#E69F00', '#696969'),
+             0.5, 20, 20)
 
 # Add other elements to the map:
 m <- m |> leaflet::addPolygons(
@@ -191,7 +177,7 @@ m <- m |> leaflet::addPolygons(
     position = 'bottomleft'
     ) |>
   leaflegend::addLegendImage(
-    images      = leg,
+    images      = wqLeg,
     labels      = c('Coastal-Active', 'Coastal-Inactive', 'Lake', 'Stream-Active', 
                     'Stream-Inactive', 'Not Sampled'),
     labelStyle  = "font-size: 14px;",
@@ -402,6 +388,34 @@ Overview
 
 ## Column {.tabset .tabset-fade data-width=650}
 
+```{r screen size modal}
+# Initialize a reactive value to track if a water quality subtab has been clicked yet:
+fc <- reactiveVal(TRUE)
+
+# UI for the initial informational popup:
+screen_txt <- modalDialog(
+  title = "MOBILE DEVICE DETECTED",
+  HTML("<b>PLEASE NOTE:</b>"),
+  tags$p(""),
+  HTML("It appears you are attempting to view this dashboard using a mobile device.
+       This dashboard is still in development and some features may not be displayed 
+       properly on a mobile device. For the best experience, please view this dashboard on a
+       desktop or tablet computer."),
+  easyClose = TRUE,
+  footer = modalButton("Close"),
+  style = "font-size:90%"
+)
+
+# Make sure initial info popup only displayed when the water quality tab is first 
+# opened:
+observeEvent(input$active_tab, {
+  if (input$active_tab == "Overview" & input$screen_width < 800 & fc()){
+    showModal(screen_txt)
+    fc(FALSE) 
+    }
+  })
+```
+
 
 <div class = "row">
 <div class = "col-md-2"></div>
@@ -436,7 +450,7 @@ This dashboard provides several types of data for exploration, including:
 
 <br>
 
-The source content for this dashboard can be viewed on [Github](https://github.com/PCDEM){target="_blank"}.
+The source content for this dashboard can be viewed on [Github](https://github.com/PCDEM/water_quality_dashboard){target="_blank"}.
 
 Technical questions about our water quality data can be sent to [Stacey Day](mailto:sday@pinellas.gov). 
 <br>
@@ -1147,11 +1161,6 @@ knitr::include_graphics('www/entero.png')
 <br>
 
 
-
-## Column {.tabset .tabset-fade data-width="310"}
-
-### Red Tide
-
 ```{r}
 
 # Read in red tide and entero data and set limits for color coding:
@@ -1166,31 +1175,114 @@ dat <- readxl::read_excel('Data/Pinellas_RedTide_Entero.xlsx') |>
            ifelse(Enterococcus >= 36 & Enterococcus <= 70, 'yellow', 'red')),
     Date = format(Date, '%m/%d/%Y'))
 
-# Get the most recent data for red tide and bacteria:
-rDat <- dat |>
-  dplyr::filter(Date == Date[max(which(!is.na(dat$`Karenia brevis`)))])
-
-# Get the most recent data for bacteria:
-eDat <- dat |>
-  dplyr::filter(Date == Date[max(which(!is.na(dat$Enterococcus)))])
+```
 
 
-# Custom red tide legend:
-ll <- rep('circle', 5)
-leg2 <- setNames(
-  Map(
-    f              = leaflegend::makeSymbol,
-    shape          = ll,
-    color          = 'black',
-    fillColor      = c('#878686', 'white', 'yellow', 'orange', 'red'),
-    opacity        = 1,
-    fillOpacity    = 0.8,
-    height         = 10,
-    width          = 15,
-    'stroke-width' = 1
-  ), 
-  ll
-) 
+## Column {.tabset .tabset-fade data-width="310"}
+
+### Red Tide
+
+```{r}
+
+rdate <- dat |>
+  dplyr::mutate(Date = as.Date(Date, format('%m/%d/%Y'))) |>
+  tidyr::drop_na(`Karenia brevis`) |>
+  dplyr::select(Date) |>
+  unique()
+
+rd <- seq.Date(rdate$Date[1], rdate$Date[length(rdate$Date)], by = 'day')
+rd <- rd[! rd %in% rdate$Date]
+
+# UI for date input and buttons
+shinyjs::useShinyjs()  # Enable shinyjs
+
+
+fluidRow(
+  column(12,
+         # Wrap the date picker and button in a container
+         div(style = "display: inline-block;",
+             shinyWidgets::airDatepickerInput(
+               inputId = 'rdate',
+               label = 'Red Tide Sampling Date',
+               minDate = min(rdate$Date),
+               maxDate = max(rdate$Date),
+               value = max(rdate$Date),
+               highlightedDates = rdate$Date,
+               disabledDates = rd,
+               dateFormat = 'M/d/yyyy',
+               autoClose = TRUE,
+               width = '85%',
+               toggleSelected = FALSE,
+               todayButton = TRUE
+             )
+         ),
+         div(style = "display: inline-block; position: relative; top: 15px; margin-left: 60px;",
+             actionButton("prev_date1", label = HTML("<i class='fa fa-arrow-left'></i> Previous")),
+         ),
+         div(style = "display: inline-block; position: relative; top: 15px; margin-left: 60px;",
+             actionButton("next_date1", label = HTML("Next <i class='fa fa-arrow-right'></i>")))
+  )
+)
+
+# Server logic to handle date updates with edge case handling
+observe({
+  current_date1 <- input$rdate
+  
+  # Update button states based on the selected date
+  if (!is.null(current_date1)) {
+    # Disable "Previous" if at the earliest date
+    if (current_date1 <= min(rdate$Date)) {
+      shinyjs::disable("prev_date1")
+    } else {
+      shinyjs::enable("prev_date1")
+    }
+    
+    # Disable "Next" if at the latest date
+    if (current_date1 >= max(rdate$Date)) {
+      shinyjs::disable("next_date1")
+    } else {
+      shinyjs::enable("next_date1")
+    }
+  }
+})
+
+# Update date picker to the previous date in the dataset. Need to add the plus
+# one since the buttons exceed the previous date when published to the website.
+# Not sure what the reason is for this.
+observeEvent(input$prev_date1, {
+  current_date1 <- as.Date(input$rdate)
+  prev_date1 <- max(rdate$Date[rdate$Date < current_date1]+1, na.rm = TRUE)
+  
+  # Check if prev_date is valid before updating
+  if (!is.infinite(prev_date1) && !is.na(prev_date1)) {
+    shinyWidgets::updateAirDateInput(session, "rdate", value = prev_date1)
+  }
+})
+
+# Update date picker to the next date in the dataset
+observeEvent(input$next_date1, {
+  current_date1 <- as.Date(input$rdate)
+  next_date1 <- min(rdate$Date[rdate$Date > current_date1]+1, na.rm = TRUE)
+  
+  # Check if next_date is valid before updating
+  if (!is.infinite(next_date1) && !is.na(next_date1)) {
+    shinyWidgets::updateAirDateInput(session, "rdate", value = next_date1)
+  }
+})
+
+
+# Red tide legend:
+rtLeg <- leg('circle', 5, c('#878686', 'white', 'yellow', 'orange', 'red'), 0.8,
+             10, 15)
+
+
+rtm <- reactive({
+  
+  rDat <- dat |>
+    dplyr::mutate(Date = as.Date(Date, format('%m/%d/%Y'))) |>
+    dplyr::filter(Date == input$rdate) |>
+    tidyr::drop_na(`Karenia brevis`)
+  
 
 # Make red tide map
 rtm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
@@ -1221,7 +1313,7 @@ rtm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
                    "Sample Date: ", Date)
     ) |>
   leaflegend::addLegendImage(
-    images      = leg2,
+    images      = rtLeg,
     labels      = c('Not Present/Background (0-1,000)', 'Very Low (>1,000-10,000)', 
                     'Low (>10,000-100,000)', 'Medium (>100,000-1,000,000)', 
                     'High (>1,000,000)'),
@@ -1236,18 +1328,15 @@ rtm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
     ) |>
   leaflet::addScaleBar(
     position = 'bottomleft'
-    ) |>
-    leaflet::addControl(
-    html = paste("<div style='font-size: 16px; color: red; font-weight: bold;'>Most recent sample:\n",unique(rDat$Date), "</div>"),
-    position = "topleft"
-  ) 
+    )
+})
 
 rtmap <- leaflet::leafletProxy('rtmap')
 
-output$rtmap <- leaflet::renderLeaflet(rtm)
+output$rtmap <- leaflet::renderLeaflet(rtm())
 
 # Display the red tide map:
-fillCol(flex = 1,
+fillCol(flex = 0.9,
         leaflet::leafletOutput('rtmap'))
 
   
@@ -1259,22 +1348,104 @@ fillCol(flex = 1,
 ### Bacteria
 
 ```{r}
-# Custom legend for bacteria
-ll2 <- rep('circle', 3)
-leg3 <- setNames(
-  Map(
-    f              = leaflegend::makeSymbol,
-    shape          = ll2,
-    color          = 'black',
-    fillColor      = c('green','yellow','red'),
-    opacity        = 1,
-    fillOpacity    = 0.8,
-    height         = 15,
-    width          = 20,
-    'stroke-width' = 1
-  ), 
-  ll2
-) 
+
+bdate <- dat |>
+  dplyr::mutate(Date = as.Date(Date, format('%m/%d/%Y'))) |>
+  tidyr::drop_na(Enterococcus) |>
+  dplyr::select(Date) |>
+  unique()
+
+bd <- seq.Date(bdate$Date[1], bdate$Date[length(bdate$Date)], by = 'day')
+bd <- bd[! bd %in% bdate$Date]
+
+
+# UI for date input and buttons
+shinyjs::useShinyjs()  # Enable shinyjs
+
+
+fluidRow(
+  column(12,
+         # Wrap the date picker and button in a container
+         div(style = "display: inline-block;",
+             shinyWidgets::airDatepickerInput(
+               inputId = 'bdate', 
+               label = 'Bacteria Sampling Date',
+               minDate = min(bdate$Date),
+               maxDate = max(bdate$Date),
+               value = max(bdate$Date),
+               highlightedDates = bdate$Date,
+               disabledDates = bd,
+               dateFormat = 'M/d/yyyy',
+               autoClose = TRUE,
+               width = '85%',
+               toggleSelected = FALSE,
+               todayButton = TRUE
+             )
+         ),
+         div(style = "display: inline-block; position: relative; top: 15px; margin-left: 60px;",
+             actionButton("prev_date", label = HTML("<i class='fa fa-arrow-left'></i> Previous")),
+         ),
+         div(style = "display: inline-block; position: relative; top: 15px; margin-left: 60px;",
+             actionButton("next_date", label = HTML("Next <i class='fa fa-arrow-right'></i>")))
+  )
+)
+
+
+# Server logic to handle date updates with edge case handling
+observe({
+  current_date <- input$bdate
+  
+  # Update button states based on the selected date
+  if (!is.null(current_date)) {
+    # Disable "Previous" if at the earliest date
+    if (current_date <= min(bdate$Date)) {
+      shinyjs::disable("prev_date")
+    } else {
+      shinyjs::enable("prev_date")
+    }
+    
+    # Disable "Next" if at the latest date
+    if (current_date >= max(bdate$Date)) {
+      shinyjs::disable("next_date")
+    } else {
+      shinyjs::enable("next_date")
+    }
+  }
+})
+
+# Update date picker to the previous date in the dataset
+observeEvent(input$prev_date, {
+  current_date <- as.Date(input$bdate)
+  prev_date <- max(bdate$Date[bdate$Date < current_date]+1, na.rm = TRUE)
+  
+  # Check if prev_date is valid before updating
+  if (!is.infinite(prev_date) && !is.na(prev_date)) {
+    shinyWidgets::updateAirDateInput(session, "bdate", value = prev_date)
+  }
+})
+
+# Update date picker to the next date in the dataset
+observeEvent(input$next_date, {
+  current_date <- as.Date(input$bdate)
+  next_date <- min(bdate$Date[bdate$Date > current_date]+1, na.rm = TRUE)
+  
+  # Check if next_date is valid before updating
+  if (!is.infinite(next_date) && !is.na(next_date)) {
+    shinyWidgets::updateAirDateInput(session, "bdate", value = next_date)
+  }
+})
+
+
+# Bacteria legend:
+bLeg <- leg('circle', 3, c('green','yellow','red'), 0.8, 15, 20)
+
+
+bm <- reactive({
+  
+  bDat <- dat |>
+    dplyr::mutate(Date = as.Date(Date, format('%m/%d/%Y'))) |>
+    dplyr::filter(Date == input$bdate) |>
+    tidyr::drop_na(Enterococcus)
 
 # Make bacteria map
 bm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
@@ -1285,7 +1456,7 @@ bm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
     zoom = 10
   ) |>
   leaflet::addCircleMarkers(
-    data         = eDat,
+    data         = bDat,
     lng          = ~Longitude,
     lat          = ~Latitude,
     color        = 'black',
@@ -1305,7 +1476,7 @@ bm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
                    "Sample Date: ", Date)
     ) |>
   leaflegend::addLegendImage(
-    images      = leg3,
+    images      = bLeg,
     labels      = c('Good (<35)','Moderate (36-70)', 'Poor (>70)'),
     labelStyle  = "font-size: 12px;",
     width       = 20,
@@ -1318,19 +1489,16 @@ bm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
     ) |>
   leaflet::addScaleBar(
     position = 'bottomleft'
-    ) |>
-    leaflet::addControl(
-    html = paste("<div style='font-size: 16px; color: red; font-weight: bold;'>Most recent sample:",unique(eDat$Date),"</div>"),
-    position = "topleft"
-  ) 
+    ) 
+})
 
 bmap <- leaflet::leafletProxy('bmap')
 
 
-output$bmap <- leaflet::renderLeaflet(bm)
+output$bmap <- leaflet::renderLeaflet(bm())
 
 # Display the bacteria map:
-fillCol(flex = 1,
+fillCol(flex = 0.9,
         leaflet::leafletOutput('bmap'))
 
 ```
