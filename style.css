@@ -120,8 +120,6 @@ body .html-widget.gauge svg {
 }
 
 
-
-
 .modal-footer {
   position: relative; /* Ensure the footer itself is positioned */
 }
@@ -140,4 +138,5 @@ body .html-widget.gauge svg {
 .modal-footer .btn:hover {
   background-color: #d32f2f; /* Optional: hover effect */
 }
+
 

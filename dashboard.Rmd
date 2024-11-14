@@ -34,8 +34,6 @@ source('R/funcs.R')
 # Import water quality data:
 wqIn <- readxl::read_excel("Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx",
                            guess_max = 50000)
-# wqIn <- readxl::read_excel("Data/New_Data.xlsx", 
-#                            guess_max = 50000)
 
 # Import FDEP WBID water quality thresholds (some of the WBID names may not exactly
 # match FDEP WBID names due to Pinellas County monitoring program specifics. For 
@@ -50,15 +48,15 @@ wqM <- wqIn |>
   dplyr::mutate(TN = TKN + NOX) |>
   dplyr::group_by(WBID, Date, Segment,Type) |>
   dplyr::summarise(
-            DO        = mean_n(`DO%_avg`),
+            DO        = mean_n(`DO%`),
             chl_a     = mean_n(`Chl-a`),
             TN        = mean_n(TN),
             TP        = mean_n(TP),
             TSS       = mean_n(TSS),
             Turbidity = mean_n(Turbidity),
             Secchi    = mean_n(Secchi),
-            Temp      = mean_n(Temp_Water_avg),
-            Salinity  = mean_n(Salinity_avg),
+            Temp      = mean_n(Temp_Water),
+            Salinity  = mean_n(Salinity),
             Ecoli     = mean_n(E_coli),
             Entero    = mean_n(Enterococci)
             ) |>
@@ -752,7 +750,7 @@ rcd <- reactive({
     wqIn |>
       dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()]) |>
       dplyr::select(Date, WBID, Type, chl_a = `Chl-a`, chla_q = `Chla_q`,
-                    DOsat = `DO%_avg`, DOsat_q = `DO%_q`, TKN, TKN_q, NOX, NOX_q, 
+                    DOsat = `DO%`, DOsat_q = `DO%_q`, TKN, TKN_q, NOX, NOX_q, 
                     TP, TP_q, E_coli, Eco_q, Enterococci, EC_q)) |>
     dplyr::group_by(Date, WBID, Type) |>
     dplyr::summarise_if(is.numeric, mean, na.rm = TRUE)
@@ -1166,8 +1164,8 @@ knitr::include_graphics('www/entero.png')
 # Read in red tide and entero data and set limits for color coding:
 dat <- readxl::read_excel('Data/Pinellas_RedTide_Entero.xlsx') |>
   dplyr::mutate(`Karenia brevis` = stringr::str_to_title(`Karenia brevis`),
-    Color = ifelse(`Karenia brevis` <= 1000, "#878686",
-                 ifelse(`Karenia brevis` %in% seq(1001,10000), "white", 
+    Color = ifelse(`Karenia brevis` < 1000, "#878686",
+                 ifelse(`Karenia brevis` %in% seq(1000,10000), "white", 
                  ifelse(`Karenia brevis` %in% seq(10001,100000), "yellow",
                  ifelse(`Karenia brevis` %in% seq(100001,1000000), "orange",
                  ifelse(`Karenia brevis` > 1000000, "red", "black"))))),
