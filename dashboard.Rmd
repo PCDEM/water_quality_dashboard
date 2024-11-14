@@ -44,7 +44,7 @@ wCrit <- readxl::read_excel('Data/WBID_criteria.xlsx', sheet = 'Criteria')
 # Calculate means for parameters and keep only surface level data (those are the 
 # data used to generate plots in the dashboard):
 wqM <- wqIn |>
-  # dplyr::filter(Level == 'Surface') |>
+  dplyr::filter(Level == 'Surface') |>
   dplyr::mutate(TN = TKN + NOX) |>
   dplyr::group_by(WBID, Date, Segment,Type) |>
   dplyr::summarise(
@@ -1249,7 +1249,7 @@ observe({
 # Not sure what the reason is for this.
 observeEvent(input$prev_date1, {
   current_date1 <- as.Date(input$rdate)
-  prev_date1 <- max(rdate$Date[rdate$Date < current_date1]+1, na.rm = TRUE)
+  prev_date1 <- max(rdate$Date[rdate$Date < current_date1], na.rm = TRUE)
   
   # Check if prev_date is valid before updating
   if (!is.infinite(prev_date1) && !is.na(prev_date1)) {
@@ -1260,7 +1260,7 @@ observeEvent(input$prev_date1, {
 # Update date picker to the next date in the dataset
 observeEvent(input$next_date1, {
   current_date1 <- as.Date(input$rdate)
-  next_date1 <- min(rdate$Date[rdate$Date > current_date1]+1, na.rm = TRUE)
+  next_date1 <- min(rdate$Date[rdate$Date > current_date1], na.rm = TRUE)
   
   # Check if next_date is valid before updating
   if (!is.infinite(next_date1) && !is.na(next_date1)) {
@@ -1414,7 +1414,7 @@ observe({
 # Update date picker to the previous date in the dataset
 observeEvent(input$prev_date, {
   current_date <- as.Date(input$bdate)
-  prev_date <- max(bdate$Date[bdate$Date < current_date]+1, na.rm = TRUE)
+  prev_date <- max(bdate$Date[bdate$Date < current_date], na.rm = TRUE)
   
   # Check if prev_date is valid before updating
   if (!is.infinite(prev_date) && !is.na(prev_date)) {
@@ -1425,7 +1425,7 @@ observeEvent(input$prev_date, {
 # Update date picker to the next date in the dataset
 observeEvent(input$next_date, {
   current_date <- as.Date(input$bdate)
-  next_date <- min(bdate$Date[bdate$Date > current_date]+1, na.rm = TRUE)
+  next_date <- min(bdate$Date[bdate$Date > current_date], na.rm = TRUE)
   
   # Check if next_date is valid before updating
   if (!is.infinite(next_date) && !is.na(next_date)) {
