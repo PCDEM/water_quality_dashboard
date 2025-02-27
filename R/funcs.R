@@ -647,11 +647,11 @@ tbd <- function(input,value){
 }
 
 # Check to see which polygon what clicked:
-getStrata <- function(spDat,lat, lng){
+getStrata <- function(spDat, lat, lng){
   spt <- as(spDat, "Spatial")
-  pnt <- sp::SpatialPoints(matrix(c(lng, lat),ncol=2), 
+  pnt <- sp::SpatialPoints(matrix(c(lng, lat), ncol = 2), 
                            proj4string = sp::CRS(sp::proj4string(spt)))
-  return(sp::over(pnt,spt)$WBID)
+  return(sp::over(pnt, spt)$WBID)
 }
 
 # Function to create a plotly plot

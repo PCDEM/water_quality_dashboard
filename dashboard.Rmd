@@ -32,8 +32,13 @@ source('R/funcs.R')
 ```{r data handling, include=FALSE}
 
 # Import water quality data:
-wqIn <- readxl::read_excel("Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx",
-                           guess_max = 50000)
+wqInit <- readxl::read_excel("Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx",
+                           guess_max = 50000) 
+
+# If a secchi value is VOB, convert it NA since it doesn't represent the true
+# secchi depth:
+wqIn <- wqInit |>
+  dplyr::mutate(Secchi = ifelse(Secchi_q %in% c('VOB', 'S'), NA, Secchi)) 
 
 # Import FDEP WBID water quality thresholds (some of the WBID names may not exactly
 # match FDEP WBID names due to Pinellas County monitoring program specifics. For 
@@ -45,7 +50,8 @@ wCrit <- readxl::read_excel('Data/WBID_criteria.xlsx', sheet = 'Criteria')
 # data used to generate plots in the dashboard):
 wqM <- wqIn |>
   dplyr::filter(Level == 'Surface') |>
-  dplyr::mutate(TN = TKN + NOX) |>
+  dplyr::mutate(TN = TKN + NOX,
+                Date = as.Date(Date)) |>
   dplyr::group_by(WBID, Date, Segment,Type) |>
   dplyr::summarise(
             DO        = mean_n(`DO%`),
@@ -72,7 +78,7 @@ wqShp <- sf::st_read('GIS/Waterbody_IDs_(WBIDs).shp') |>
          Type = ifelse(is.na(Type), 'NOT SAMPLED', Type),
          Status = ifelse(WBID %in% c('1558C', '1558B', '1709D', '1709F', '1716A',
                                      '1696', '1603B', '1700', '1683', '1530',
-                                     '1624A', '1556A'), 'Inactive', 
+                                     '1624A', '1556A','1716D','1701A','1701B'), 'Inactive', 
                          ifelse(Type == 'NOT SAMPLED', 'Not Sampled', 'Active')),
          color = ifelse(Type == 'COASTAL' & Status == 'Active', '#00244c',
                   ifelse(Type == 'COASTAL' & Status == 'Inactive', '#6A5ACD',
@@ -442,7 +448,7 @@ This dashboard is designed to make the Division’s (PCDEM) monitoring results a
 This dashboard provides several types of data for exploration, including:
 
 1) [__Water Quality__](#water-quality): Water quality data from monitoring sites throughout Pinellas County.
-1) [__Red Tide & Bacteria__](#red-tide-bacteria): Current Pinellas County red tide and beach bacteria data.
+1) [__Red Tide & Beach Bacteria__](#red-tide-beach-bacteria): Current Pinellas County red tide and beach bacteria data.
 1) [__Annual Report__](#annual-report): Annual report summarizing water quality and habitat monitoring data
 1) [__Data Downloads__](#data-download): Downloadable water quality data.
 
@@ -616,7 +622,6 @@ page which can be accessed by clicking the "Source Code" button at the top of th
 dashboard.
 
 <br> 
-
 
 ### BACKGROUND
 
@@ -1126,7 +1131,7 @@ An increase in nutrient levels in the water can can promote the growth of algal 
 The Pass/Fail designation for each parameter is determined by calculating the annual geometric mean and then comparing it to the FDEP standard. If the value exceeds the FDEP standard, the site will get a 'Fail' for that parameter. If the value does not exceed the standard, the site will get a 'Pass'. Visit the FDEP Water Quality Standards [webpage](https://floridadep.gov/DEAR/Water-Quality-Standards){target="_blank"} for more information about specific water quality criteria throughout the state of Florida.
 
 
-Red Tide & Bacteria
+Red Tide & Beach Bacteria
 ===========================================================
 
 ## Column {.tabset .tabset-fade data-width="180"}
@@ -1145,7 +1150,7 @@ knitr::include_graphics('www/k_brevis.png')
 <br>
 
 
-### Bacteria
+### Beach Bacteria
 
 *Enterococcus* is a type of bacteria found in water, soil, and the intestines of humans and animals. This bacterium is used as an indicator of water quality at beaches, as high levels can signal contamination from sources like sewage, stormwater runoff, or animal waste. This contamination can pose health risks, as exposure to *Enterococcus* in water can lead to gastrointestinal illness and a variety of infections.
 
@@ -1168,7 +1173,7 @@ dat <- readxl::read_excel('Data/Pinellas_RedTide_Entero.xlsx') |>
                  ifelse(`Karenia brevis` %in% seq(1000,10000), "white", 
                  ifelse(`Karenia brevis` %in% seq(10001,100000), "yellow",
                  ifelse(`Karenia brevis` %in% seq(100001,1000000), "orange",
-                 ifelse(`Karenia brevis` > 1000000, "red", "black"))))),
+                 ifelse(`Karenia brevis` %in% seq(1000001,10000000), "red","black"))))),
     bact = ifelse(Enterococcus <= 35, 'green',
            ifelse(Enterococcus >= 36 & Enterococcus <= 70, 'yellow', 'red')),
     Date = format(Date, '%m/%d/%Y'))
@@ -1244,9 +1249,7 @@ observe({
   }
 })
 
-# Update date picker to the previous date in the dataset. Need to add the plus
-# one since the buttons exceed the previous date when published to the website.
-# Not sure what the reason is for this.
+# Update date picker to the previous date in the dataset. 
 observeEvent(input$prev_date1, {
   current_date1 <- as.Date(input$rdate)
   prev_date1 <- max(rdate$Date[rdate$Date < current_date1], na.rm = TRUE)
@@ -1520,7 +1523,7 @@ This report is the most recent annual water quality prepared by the Pinellas Cou
 # Display a annual report PDF:
 fillCol(flex = c(1,0.1),
   tags$iframe(style = "border: none; width: 100%; height: 100%;",
-              src = "2022 PCDEM Ambient Water Quality Report.pdf"))
+              src = "2023 PCDEM Ambient Water Quality Report.pdf"))
 ```
 
 
@@ -1535,7 +1538,7 @@ Data Download
 
 # Get data for download
 datWB <- reactive({
-  return(dat <- wqIn |>
+  return(dat <- wqInit |>
            dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()]))
   })
 
