@@ -757,7 +757,6 @@ pltmsg <- function(dataFunc, colName, plotFunc) {
   })
 }
 
-
 # Custom legend:
 leg <- function(shape, n, colors, fOp, h, w){
   legnd <- setNames(
@@ -773,5 +772,49 @@ leg <- function(shape, n, colors, fOp, h, w){
       'stroke-width' = 1
     ),
     rep(shape,n)
+  )
+}
+
+# These two functions are used to make the popup tables for the watersheds:
+
+# Generate a single table row with styling
+table_row <- function(label, value, bg_color, color = "black") {
+  paste0(
+    "<tr style='background-color: ", bg_color, ";'>",
+    "<td style='text-align: left; padding: 2px; border: 1px solid black;'><b>", label, "</b></td>",
+    "<td style='text-align: right; padding: 2px; border: 1px solid black; color:", color, ";'>", value, "</td>",
+    "</tr>"
+  )
+}
+
+# Generate the entire table popup
+create_popup <- function(ID, REGION, HUC, WBID, Area, CLASS, Type, Status, DO_crit,
+                         chla_crit, TN_crit, TP_crit, Ecoli_crit, Entero_crit) {
+  
+  # Table row colors
+  c1 <- '#dbe6f3'
+  c2 <- '#f0f4fb'
+  
+  paste0(
+    "<div style='font-family: Arial; font-size: 12px; padding: 5px;'>",
+    "<b>", ID, "</b><br>",
+    "<table style='border-collapse: collapse; width: 100%; font-size: 12px; line-height: 1; border: 1px solid black;'>",
+    
+    table_row("Sampling Status", Status, c1, 
+          ifelse(Status == "Active", "green", ifelse(Status == "Inactive", "red", "black"))),
+    table_row("Region", REGION, c1),
+    table_row("HUC", HUC, c2),
+    table_row("WBID", WBID, c1),
+    table_row("Area", paste(round(Area,1), "sq. mi."), c2),
+    table_row("Class", CLASS, c1),
+    table_row("Water Type", stringr::str_to_title(Type), c2),
+    table_row("FDEP DO Limit", paste(DO_crit, ifelse(is.na(DO_crit), "", "mg/L")), c1),
+    table_row("FDEP Chl-a Limit", paste(chla_crit, ifelse(is.na(chla_crit), "", "µg/L")), c2),
+    table_row("FDEP TN Limit", paste(TN_crit, ifelse(is.na(TN_crit), "", "mg/L")), c1),
+    table_row("FDEP TP Limit", paste(TP_crit, ifelse(is.na(TP_crit), "", "mg/L")), c2),
+    table_row("FDEP E. coli Limit", paste(Ecoli_crit, ifelse(is.na(Ecoli_crit), "", "MPN/100mL")), c1),
+    table_row("FDEP Enterococci Limit", paste(Entero_crit, ifelse(is.na(Entero_crit), "", "MPN/100mL")), c2),
+    
+    "</table></div>"
   )
 }
