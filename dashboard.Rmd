@@ -33,7 +33,8 @@ source('R/funcs.R')
 
 # Import water quality data:
 wqInit <- readxl::read_excel("Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx",
-                           guess_max = 50000) 
+                           guess_max = 50000) |>
+  dplyr::mutate(Date = as.Date(Date))
 
 # If a secchi value is VOB, convert it NA since it doesn't represent the true
 # secchi depth:
@@ -72,27 +73,33 @@ wqM <- wqIn |>
 # around Lakes Seminole and Tarpon non-interactive since they are not sampled
 # and to make the Lakes easier to click:
 wqShp <- sf::st_read('GIS/Waterbody_IDs_(WBIDs).shp') |>
-  dplyr::select(WBID, ID = WATERBODY_) |>
+  dplyr::select(HUC, WBID, ID = WATERBODY_, REGION = GROUP_NAME, CLASS) |>
   sf::st_transform("+proj=longlat +ellps=WGS84 +datum=WGS84") |>
-  dplyr::mutate(Type = wqM$Type[match(WBID, wqM$WBID)],
-         Type = ifelse(is.na(Type), 'NOT SAMPLED', Type),
-         Status = ifelse(WBID %in% c('1558C', '1558B', '1709D', '1709F', '1716A',
-                                     '1696', '1603B', '1700', '1683', '1530',
-                                     '1624A', '1556A','1716D','1701A','1701B'), 'Inactive', 
+  dplyr::mutate(
+    geometry = sf::st_make_valid(geometry),
+    Type = wqM$Type[match(WBID, wqM$WBID)],
+    Type = ifelse(is.na(Type), 'NOT SAMPLED', Type),
+    Status = ifelse(WBID %in% c('1558C', '1558B', '1709D', '1709F', '1716A','1696', 
+                                '1603B', '1700', '1683', '1530','1624A', '1556A',
+                                '1716D','1701A','1701B'), 'Inactive', 
                          ifelse(Type == 'NOT SAMPLED', 'Not Sampled', 'Active')),
-         color = ifelse(Type == 'COASTAL' & Status == 'Active', '#00244c',
-                  ifelse(Type == 'COASTAL' & Status == 'Inactive', '#6A5ACD',
-                   ifelse(Type == 'LAKE', '#40E0D0', 
-                    ifelse(Type %in% c('TIDAL', 'FRESHWATER') & Status == 'Active', '#006400',
-                     ifelse(Type %in% c('TIDAL', 'FRESHWATER') & Status == 'Inactive', '#E69F00',
-                               'gray60'))))),
-         interactive = ifelse(WBID %in% c(1486, '1618A', '1603A'), FALSE, TRUE),
-         chla_crit   = wCrit$chla_crit[match(WBID,wCrit$WBID)],
-         TN_crit     = wCrit$TN_crit[match(WBID,wCrit$WBID)],
-         TP_crit     = wCrit$TP_crit[match(WBID,wCrit$WBID)],
-         DO_crit     = wCrit$DO_crit[match(WBID,wCrit$WBID)],
-         Ecoli_crit  = wCrit$Ecoli_crit[match(WBID,wCrit$WBID)],
-         Entero_crit = wCrit$Entero_crit[match(WBID,wCrit$WBID)])
+    color = ifelse(Type == 'MARINE' & Status == 'Active', '#00244c',
+            ifelse(Type == 'MARINE' & Status == 'Inactive', '#6A5ACD',
+             ifelse(Type == 'LAKE', '#40E0D0', 
+              ifelse(Type %in% c('TIDAL', 'FRESHWATER') & Status == 'Active', '#006400',
+               ifelse(Type %in% c('TIDAL', 'FRESHWATER') & Status == 'Inactive', '#E69F00',
+                         'gray60'))))),
+    interactive = ifelse(WBID %in% c(1486, '1618A', '1603A'), FALSE, TRUE),
+    chla_crit   = wCrit$chla_crit[match(WBID,wCrit$WBID)],
+    TN_crit     = wCrit$TN_crit[match(WBID,wCrit$WBID)],
+    TP_crit     = wCrit$TP_crit[match(WBID,wCrit$WBID)],
+    DO_crit     = wCrit$DO_crit[match(WBID,wCrit$WBID)],
+    Ecoli_crit  = wCrit$Ecoli_crit[match(WBID,wCrit$WBID)],
+    Entero_crit = wCrit$Entero_crit[match(WBID,wCrit$WBID)],
+    Area = units::set_units(sf::st_area(geometry), mi^2)
+  )
+
+
 ```
 
 ```{r WBID map, include=FALSE}
@@ -134,12 +141,15 @@ for (type in unique(wqShp$Type)) {
     fill        = TRUE,
     fillColor   = ~color,
     label       = ~ID,
+    popup       = ~create_popup(ID, REGION, HUC, WBID, Area, CLASS, Type, Status,
+                                DO_crit, chla_crit, TN_crit, TP_crit, Ecoli_crit,
+                                Entero_crit),
     highlightOptions = leaflet::highlightOptions(
       color = 'white', 
       weight = 4,
       opacity = 0.5)
     ) 
-  }
+}
 
 # Custom legend for WBID types:
 wqLeg <- leg('rect', 6, c('#00244c', '#6A5ACD', '#40E0D0', '#006400', '#E69F00', '#696969'),
@@ -154,7 +164,7 @@ m <- m |> leaflet::addPolygons(
   color       = 'green',
   fill        = TRUE,
   fillColor   = ~color,
-  label       = ~ID
+  label       = ~ID,
   ) |> 
   leaflet::addLayersControl(
     position = "topleft",  
@@ -175,14 +185,14 @@ m <- m |> leaflet::addPolygons(
     opacity          = 0.7,
     fill             = TRUE,
     fillColor        = 'gray60',
-    options          = leaflet::pathOptions(clickable = FALSE)
+    options          = leaflet::pathOptions(clickable = FALSE),
     ) |>
   leaflet::addScaleBar(
     position = 'bottomleft'
     ) |>
   leaflegend::addLegendImage(
     images      = wqLeg,
-    labels      = c('Coastal-Active', 'Coastal-Inactive', 'Lake', 'Stream-Active', 
+    labels      = c('Marine-Active', 'Marine-Inactive', 'Lake', 'Stream-Active', 
                     'Stream-Inactive', 'Not Sampled'),
     labelStyle  = "font-size: 14px;",
     width       = 15,
@@ -379,7 +389,8 @@ Sinf <- function(site){
   if (Sw %in% c('1528A','1694B','1694A','1558N')) bcb(input, 'info',site)
   if (Sw %in% c(1529, 1530, 1550, 1614, 1683, 1696, 1700, '1541B', '1530A',
                 '1541C', '1603B', '1603D', '1574A', '1567C', '1662A', '1618D',
-                '1668B', '1668D', '1558C', '1558B', '1709D', '1709F', '1716A'))
+                '1668B', '1668D', '1558C', '1558B', '1709D', '1709F', '1716A',
+                '1604B1'))
     tbd(input, 'info')
   if (Sw == 'Not Sampled') noInfo(input, 'info')
   }
@@ -637,7 +648,7 @@ knitr::include_graphics('www/lr.png')
 ```
 <br>
 
-#### Coastal Sites
+#### Coastal Marine Sites
 
 Water quality is also monitored in the coastal waters and lakes (Lakes Tarpon and Seminole) and follow a similar design to the FDEP WBID with the exception of a few sites which combine/divide WBIDs. On the map tab, marine waters are dark blue and the lakes are light blue. The figure below shows the distribution of
 these sampling areas (strata). However, sites E6 And E7 (Middle Tampa Bay) are part of the City of St.
@@ -772,7 +783,7 @@ rcd <- reactive({
       dplyr::filter(Year != lubridate::year(Sys.Date())) |>
       dplyr::summarise(
         total_samples = dplyr::n(),
-        n_below = ifelse(Type == 'Coastal', length(which(DOsat < 42)),
+        n_below = ifelse(Type == 'MARINE', length(which(DOsat < 42)),
                          length(which(DOsat < 38)))) |>
       dplyr::distinct() |>
       dplyr::mutate(do_grade = ifelse((n_below/total_samples) > 0.1, 'Fail', 'Pass'))
@@ -1129,6 +1140,150 @@ Some of FDEP's water quality criteria include dissolved oxygen, chlorophyll-a, a
 An increase in nutrient levels in the water can can promote the growth of algal blooms and other nuisance aquatic vegetation. As the blooms begin to die off, their decomposition leads to a decrease in dissolved oxygen in the water, which can be harmful to aquatic life. 
 
 The Pass/Fail designation for each parameter is determined by calculating the annual geometric mean and then comparing it to the FDEP standard. If the value exceeds the FDEP standard, the site will get a 'Fail' for that parameter. If the value does not exceed the standard, the site will get a 'Pass'. Visit the FDEP Water Quality Standards [webpage](https://floridadep.gov/DEAR/Water-Quality-Standards){target="_blank"} for more information about specific water quality criteria throughout the state of Florida.
+
+
+<!-- Bioassessments  -->
+<!-- =========================================================== -->
+
+<!-- ## Column {.tabset .tabset-fade data-width="220"} -->
+
+<!-- ### MAP -->
+
+<!-- ```{r bio map, include=FALSE} -->
+
+<!-- bios <- wqShp |> -->
+<!--   dplyr::filter(WBID %in% c('1527B', '1633A',1650,'1574A', '1603D', '1486A', -->
+<!--                             '1527B','1538A','1567B','1614','1567C',1643,1550, -->
+<!--                             '1633E',1475,'1668A',1641,'1569A',1627,1474,1529, -->
+<!--                             '1541C',1574,'1575A','1604B1','1618_S','1618_N')) |> -->
+<!--   dplyr::mutate(bio = ifelse(Type == 'LAKE', 'LVI', 'SCI'), -->
+<!--                 color = ifelse(WBID %in% c('1486A','1574A','1603D','1633A','1650', -->
+<!--                                            '1618_N','1618_S'), -->
+<!--                                '#40E0D0', '#006400')) -->
+
+<!-- # Create the base map and set options: -->
+<!-- f <- leaflet::leaflet( -->
+<!--   options = leaflet::leafletOptions( -->
+<!--     zoomControl = TRUE,  -->
+<!--     zoomSnap    = 0.1,  -->
+<!--     zoomDelta   = 1) -->
+<!--   ) |> -->
+<!--   leaflet::addTiles(attribution = '') |> -->
+<!--   leaflet::addProviderTiles( -->
+<!--     leaflet::providers$CartoDB.Positron, group = 'CartoDB.Positron' -->
+<!--     ) |> -->
+<!--   leaflet::addProviderTiles( -->
+<!--     leaflet::providers$Esri.WorldImagery, group = 'Esri.WorldImagery' -->
+<!--     ) |> -->
+<!--   leaflet::addProviderTiles( -->
+<!--     leaflet::providers$OpenTopoMap, group = 'OpenTopoMap' -->
+<!--     ) |> -->
+<!--   leaflet::setView( -->
+<!--     lng  = -82.72,  -->
+<!--     lat  = 27.905,  -->
+<!--     zoom = 10.6 -->
+<!--     ) -->
+
+<!-- # Custom legend for WBID types: -->
+<!-- wqLeg <- leg('rect', 2, c('#40E0D0','#006400'), -->
+<!--              0.5, 20, 20) -->
+
+
+<!-- # Add other elements to the map: -->
+<!-- f <- f |> leaflet::addPolygons( -->
+<!--   data        = bios[bios$WBID == '1486A', ], -->
+<!--   layerId     = 'shape', -->
+<!--   fillOpacity = 0.17, -->
+<!--   stroke      = TRUE, -->
+<!--   color       = 'green', -->
+<!--   fill        = TRUE, -->
+<!--   fillColor   = ~color, -->
+<!--   label       = ~ID -->
+<!--   ) |>  -->
+<!--   leaflet::addLayersControl( -->
+<!--     position = "topleft",   -->
+<!--     baseGroups = c("CartoDB.Positron", "Esri.WorldImagery", "OpenTopoMap"), -->
+<!--     options = leaflet::layersControlOptions( -->
+<!--       collapsed = TRUE) -->
+<!--     ) |>  -->
+<!--   leaflet::addPolygons( -->
+<!--     data             = bios, -->
+<!--     popup            = NULL, -->
+<!--     label            = NULL, -->
+<!--     highlightOptions = NULL, -->
+<!--     weight           = 0.8, -->
+<!--     fillOpacity      = 0.3, -->
+<!--     stroke           = TRUE, -->
+<!--     color            = 'black', -->
+<!--     opacity          = 0.7, -->
+<!--     fill             = TRUE, -->
+<!--     fillColor        = ~color, -->
+<!--     options          = leaflet::pathOptions(clickable = FALSE) -->
+<!--     ) |> -->
+<!--   leaflet::addScaleBar( -->
+<!--     position = 'bottomleft' -->
+<!--     ) |> -->
+<!--   leaflegend::addLegendImage( -->
+<!--     images      = wqLeg, -->
+<!--     labels      = c('LVI','SCI'), -->
+<!--     labelStyle  = "font-size: 14px;", -->
+<!--     width       = 15, -->
+<!--     height      = 11, -->
+<!--     orientation = 'vertical', -->
+<!--     title = htmltools::tags$div('Site Type', -->
+<!--                                 style = 'font-size: 15px; text-align: center; -->
+<!--                                 font-weight: bold;'), -->
+<!--     position = 'bottomleft' -->
+<!--     )  -->
+
+
+
+
+
+<!-- biomap <- leaflet::leafletProxy('biomap')  -->
+
+<!-- # Change the highlighted WBID based on user click: -->
+<!-- observeEvent(input$mapplo_shape_click, { -->
+<!--   sName <- getStrata( -->
+<!--     spDat = bios,                    -->
+<!--     lat   = input$mapplo_shape_click$lat, -->
+<!--     lng   = input$mapplo_shape_click$lng -->
+<!--     ) -->
+<!--   biomap <- biomap |> -->
+<!--     leaflet::removeShape('shape') |> -->
+<!--     leaflet::addPolygons( -->
+<!--       data        = dplyr::filter(bios, WBID == sName), -->
+<!--       layerId     = 'shape', -->
+<!--       fillOpacity = 0.17, -->
+<!--       stroke      = TRUE, -->
+<!--       fill      = TRUE, -->
+<!--       fillColor = ~color, -->
+<!--       label     = ~ID -->
+<!--       ) -->
+<!--   }) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- # Get water quality map: -->
+<!-- output$biomap <- leaflet::renderLeaflet(f) -->
+
+
+<!-- # Display the map and info button: -->
+<!-- fillCol(flex = 1, -->
+<!--         leaflet::leafletOutput('biomap')) -->
+<!-- ``` -->
+
+
+
+<!-- ## Column {.tabset .tabset-fade data-width="550"} -->
+
+<!-- ### SCI -->
+
+<!-- ### LVI -->
+
+
+
+
 
 
 Red Tide & Beach Bacteria
