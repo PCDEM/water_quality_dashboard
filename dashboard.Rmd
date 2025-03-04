@@ -217,7 +217,7 @@ getData <- reactive({
         lat   = input$mapplo_shape_click$lat, 
         lng   = input$mapplo_shape_click$lng
         )
-      }
+    }
   data <- data.frame(
     dplyr::filter(wqM, WBID == strat) |>
     dplyr::select(
@@ -262,8 +262,8 @@ site <- reactive({
       lat = input$mapplo_shape_click$lat,
       lng = input$mapplo_shape_click$lng
       )
-    }
-    return(wqShp$ID[wqShp$WBID == sName])
+  }
+  return(wqShp$ID[wqShp$WBID == sName])
   })
 
 # Dissolved oxygen plot:
@@ -1142,144 +1142,190 @@ An increase in nutrient levels in the water can can promote the growth of algal 
 The Pass/Fail designation for each parameter is determined by calculating the annual geometric mean and then comparing it to the FDEP standard. If the value exceeds the FDEP standard, the site will get a 'Fail' for that parameter. If the value does not exceed the standard, the site will get a 'Pass'. Visit the FDEP Water Quality Standards [webpage](https://floridadep.gov/DEAR/Water-Quality-Standards){target="_blank"} for more information about specific water quality criteria throughout the state of Florida.
 
 
-<!-- Bioassessments  -->
-<!-- =========================================================== -->
+Bioassessments
+===========================================================
 
-<!-- ## Column {.tabset .tabset-fade data-width="220"} -->
+## Column {.tabset .tabset-fade data-width="220"}
 
-<!-- ### MAP -->
+### MAP
 
-<!-- ```{r bio map, include=FALSE} -->
+```{r bio map, include=FALSE}
 
-<!-- bios <- wqShp |> -->
-<!--   dplyr::filter(WBID %in% c('1527B', '1633A',1650,'1574A', '1603D', '1486A', -->
-<!--                             '1527B','1538A','1567B','1614','1567C',1643,1550, -->
-<!--                             '1633E',1475,'1668A',1641,'1569A',1627,1474,1529, -->
-<!--                             '1541C',1574,'1575A','1604B1','1618_S','1618_N')) |> -->
-<!--   dplyr::mutate(bio = ifelse(Type == 'LAKE', 'LVI', 'SCI'), -->
-<!--                 color = ifelse(WBID %in% c('1486A','1574A','1603D','1633A','1650', -->
-<!--                                            '1618_N','1618_S'), -->
-<!--                                '#40E0D0', '#006400')) -->
+Lsem <- wqShp |>
+  dplyr::filter(WBID %in% c('1618_N','1618_S')) |>
+  dplyr::summarise(geometry = sf::st_union(geometry), WBID = '1618', ID = "LAKE SEMINOLE",
+                   Type = 'LAKE') 
 
-<!-- # Create the base map and set options: -->
-<!-- f <- leaflet::leaflet( -->
-<!--   options = leaflet::leafletOptions( -->
-<!--     zoomControl = TRUE,  -->
-<!--     zoomSnap    = 0.1,  -->
-<!--     zoomDelta   = 1) -->
-<!--   ) |> -->
-<!--   leaflet::addTiles(attribution = '') |> -->
-<!--   leaflet::addProviderTiles( -->
-<!--     leaflet::providers$CartoDB.Positron, group = 'CartoDB.Positron' -->
-<!--     ) |> -->
-<!--   leaflet::addProviderTiles( -->
-<!--     leaflet::providers$Esri.WorldImagery, group = 'Esri.WorldImagery' -->
-<!--     ) |> -->
-<!--   leaflet::addProviderTiles( -->
-<!--     leaflet::providers$OpenTopoMap, group = 'OpenTopoMap' -->
-<!--     ) |> -->
-<!--   leaflet::setView( -->
-<!--     lng  = -82.72,  -->
-<!--     lat  = 27.905,  -->
-<!--     zoom = 10.6 -->
-<!--     ) -->
-
-<!-- # Custom legend for WBID types: -->
-<!-- wqLeg <- leg('rect', 2, c('#40E0D0','#006400'), -->
-<!--              0.5, 20, 20) -->
+bios <- wqShp |>
+  dplyr::filter(WBID %in% c('1527B', '1633A',1650,'1574A', '1603D', '1486A',
+                            '1527B','1538A','1567B','1614','1567C',1643,1550,
+                            '1633E',1475,'1668A',1641,'1569A',1627,1474,1529,
+                            '1541C',1574,'1575A','1604B1')) |>
+  dplyr::bind_rows(Lsem) |>
+  dplyr::mutate(bio = ifelse(Type == 'LAKE', 'LVI', 'SCI'),
+                color = ifelse(WBID %in% c('1486A','1574A','1603D','1633A','1650',
+                                           '1618'),
+                               '#40E0D0', '#006400')) 
 
 
-<!-- # Add other elements to the map: -->
-<!-- f <- f |> leaflet::addPolygons( -->
-<!--   data        = bios[bios$WBID == '1486A', ], -->
-<!--   layerId     = 'shape', -->
-<!--   fillOpacity = 0.17, -->
-<!--   stroke      = TRUE, -->
-<!--   color       = 'green', -->
-<!--   fill        = TRUE, -->
-<!--   fillColor   = ~color, -->
-<!--   label       = ~ID -->
-<!--   ) |>  -->
-<!--   leaflet::addLayersControl( -->
-<!--     position = "topleft",   -->
-<!--     baseGroups = c("CartoDB.Positron", "Esri.WorldImagery", "OpenTopoMap"), -->
-<!--     options = leaflet::layersControlOptions( -->
-<!--       collapsed = TRUE) -->
-<!--     ) |>  -->
-<!--   leaflet::addPolygons( -->
-<!--     data             = bios, -->
-<!--     popup            = NULL, -->
-<!--     label            = NULL, -->
-<!--     highlightOptions = NULL, -->
-<!--     weight           = 0.8, -->
-<!--     fillOpacity      = 0.3, -->
-<!--     stroke           = TRUE, -->
-<!--     color            = 'black', -->
-<!--     opacity          = 0.7, -->
-<!--     fill             = TRUE, -->
-<!--     fillColor        = ~color, -->
-<!--     options          = leaflet::pathOptions(clickable = FALSE) -->
-<!--     ) |> -->
-<!--   leaflet::addScaleBar( -->
-<!--     position = 'bottomleft' -->
-<!--     ) |> -->
-<!--   leaflegend::addLegendImage( -->
-<!--     images      = wqLeg, -->
-<!--     labels      = c('LVI','SCI'), -->
-<!--     labelStyle  = "font-size: 14px;", -->
-<!--     width       = 15, -->
-<!--     height      = 11, -->
-<!--     orientation = 'vertical', -->
-<!--     title = htmltools::tags$div('Site Type', -->
-<!--                                 style = 'font-size: 15px; text-align: center; -->
-<!--                                 font-weight: bold;'), -->
-<!--     position = 'bottomleft' -->
-<!--     )  -->
+# Create the base map and set options:
+f <- leaflet::leaflet(
+  options = leaflet::leafletOptions(
+    zoomControl = TRUE,
+    zoomSnap    = 0.1,
+    zoomDelta   = 1)
+  ) |>
+  leaflet::addTiles(attribution = '') |>
+  leaflet::addProviderTiles(
+    leaflet::providers$CartoDB.Positron, group = 'CartoDB.Positron'
+    ) |>
+  leaflet::addProviderTiles(
+    leaflet::providers$Esri.WorldImagery, group = 'Esri.WorldImagery'
+    ) |>
+  leaflet::addProviderTiles(
+    leaflet::providers$OpenTopoMap, group = 'OpenTopoMap'
+    ) |>
+  leaflet::setView(
+    lng  = -82.72,
+    lat  = 27.905,
+    zoom = 10.6
+    )
+
+# Iterate over each unique waterbody type and add them as separate polygon layers.
+# This will allow users to highlight specific different water types:
+for (type in unique(bios$bio)) {
+  f <- f |> leaflet::addPolygons(
+    data        = bios[bios$bio == type, ],
+    group       = type,  
+    weight      = 0.8,
+    fillOpacity = 0.3,
+    stroke      = TRUE,
+    color       = 'black',
+    opacity     = 0.7,
+    fill        = TRUE,
+    fillColor   = ~color,
+    label       = ~ID,
+    highlightOptions = leaflet::highlightOptions(
+      color = 'white', 
+      weight = 4,
+      opacity = 0.5)
+    ) 
+}
+
+
+# Custom legend for WBID types:
+wqLeg <- leg('rect', 2, c('#40E0D0','#006400'),
+             0.5, 20, 20)
+
+
+# Add other elements to the map:
+f <- f |> leaflet::addPolygons(
+  data        = bios[bios$WBID == '1486A', ],
+  layerId     = 'shape',
+  fillOpacity = 0.17,
+  stroke      = TRUE,
+  color       = 'green',
+  fill        = TRUE,
+  fillColor   = ~color,
+  label       = ~ID
+  ) |>
+  leaflet::addLayersControl(
+    position = "topleft",
+    baseGroups = c("CartoDB.Positron", "Esri.WorldImagery", "OpenTopoMap"),
+    options = leaflet::layersControlOptions(
+      collapsed = TRUE)
+    ) |>
+  leaflet::addPolygons(
+    data             = bios,
+    popup            = NULL,
+    label            = NULL,
+    highlightOptions = NULL,
+    weight           = 0.8,
+    fillOpacity      = 0.3,
+    stroke           = TRUE,
+    color            = 'black',
+    opacity          = 0.7,
+    fill             = TRUE,
+    fillColor        = ~color,
+    options          = leaflet::pathOptions(clickable = FALSE)
+    ) |>
+  leaflet::addScaleBar(
+    position = 'bottomleft'
+    ) |>
+  leaflegend::addLegendImage(
+    images      = wqLeg,
+    labels      = c('LVI','SCI'),
+    labelStyle  = "font-size: 14px;",
+    width       = 15,
+    height      = 11,
+    orientation = 'vertical',
+    title = htmltools::tags$div('Site Type',
+                                style = 'font-size: 15px; text-align: center;
+                                font-weight: bold;'),
+    position = 'bottomleft'
+    )
+
+
+biomap <- leaflet::leafletProxy('biomap')
+
+# Change the highlighted WBID based on user click:
+observeEvent(input$biomap_shape_click, {
+  sName <- getStrata(
+    spDat = bios,
+    lat   = input$biomap_shape_click$lat,
+    lng   = input$biomap_shape_click$lng
+    )
+  
+  # If sName is NULL or invalid, just return and do nothing
+  if (is.null(sName) || length(sName) == 0 || is.na(sName)) return()
+  
+  # Highlight the clicked WBID:
+  biomap <- biomap |>
+    leaflet::removeShape('shape') |>
+    leaflet::addPolygons(
+      data        = dplyr::filter(bios, WBID == sName),
+      layerId     = 'shape',
+      fillOpacity = 0.17,
+      stroke      = TRUE,
+      fill      = TRUE,
+      fillColor = ~color,
+      label     = ~ID
+      )
+  })
+```
+
+```{r}
+# Get water quality map:
+output$biomap <- leaflet::renderLeaflet(f)
+
+
+# Display the map and info button:
+fillCol(flex = 1,
+        leaflet::leafletOutput('biomap'))
+```
 
 
 
+## Column {.tabset .tabset-fade data-width="550"}
+
+### SCI
+
+```{r SCI data}
+
+sci <- readxl::read_excel('Data/Pinellas_SCI.xlsx') |>
+  dplyr::mutate(Date = as.numeric(Date),
+                Date = as.Date(Date, origin = '1899-12-30')) |>
+  dplyr::filter(WBID == '1604B1') |>
+  tidyr::drop_na(Date, `SCI Score`) |>
+  dplyr::group_by(Segment, WBID, Date) |>
+  dplyr::summarise(`SCI Score` = mean(`SCI Score`, na.rm = TRUE)) 
 
 
-<!-- biomap <- leaflet::leafletProxy('biomap')  -->
+sciPlt(sci)
 
-<!-- # Change the highlighted WBID based on user click: -->
-<!-- observeEvent(input$mapplo_shape_click, { -->
-<!--   sName <- getStrata( -->
-<!--     spDat = bios,                    -->
-<!--     lat   = input$mapplo_shape_click$lat, -->
-<!--     lng   = input$mapplo_shape_click$lng -->
-<!--     ) -->
-<!--   biomap <- biomap |> -->
-<!--     leaflet::removeShape('shape') |> -->
-<!--     leaflet::addPolygons( -->
-<!--       data        = dplyr::filter(bios, WBID == sName), -->
-<!--       layerId     = 'shape', -->
-<!--       fillOpacity = 0.17, -->
-<!--       stroke      = TRUE, -->
-<!--       fill      = TRUE, -->
-<!--       fillColor = ~color, -->
-<!--       label     = ~ID -->
-<!--       ) -->
-<!--   }) -->
-<!-- ``` -->
+```
 
-<!-- ```{r} -->
-<!-- # Get water quality map: -->
-<!-- output$biomap <- leaflet::renderLeaflet(f) -->
-
-
-<!-- # Display the map and info button: -->
-<!-- fillCol(flex = 1, -->
-<!--         leaflet::leafletOutput('biomap')) -->
-<!-- ``` -->
-
-
-
-<!-- ## Column {.tabset .tabset-fade data-width="550"} -->
-
-<!-- ### SCI -->
-
-<!-- ### LVI -->
+### LVI
 
 
 

@@ -818,3 +818,54 @@ create_popup <- function(ID, REGION, HUC, WBID, Area, CLASS, Type, Status, DO_cr
     "</table></div>"
   )
 }
+
+
+sciPlt <- function(x){
+
+  
+  plotly::plot_ly(
+    data = x,
+    type = 'scatter',
+    mode = 'markers+lines',
+    x = ~Date,
+    y = ~`SCI Score`,
+    hoverinfo = 'text',
+    text = ~paste('SCI: ', `SCI Score`, '<br>Date: ', Date)
+  ) |>
+    plotly::layout(
+      title = paste("Stream Condition Index (SCI) Scores for", stringr::str_to_title(x$Segment[1])),
+      xaxis = list(title = "Sample Date", range = c(min(x$Date),max(x$Date)), showgrid = FALSE),
+      yaxis = list(title = "Stream Condition Index", range = c(0, 100), showgrid = FALSE),
+      
+      # Define colored background sections
+      shapes = list(
+        list( # Red section (0-40)
+          type = "rect",
+          x0 = min(x$Date), x1 = max(x$Date),  
+          y0 = 0, y1 = 40,
+          fillcolor = "rgba(255, 102, 102, 0.3)", 
+          line = list(width = 0)
+        ),
+        list( # Orange section (41-65)
+          type = "rect",
+          x0 = min(x$Date), x1 = max(x$Date), 
+          y0 = 40, y1 = 65,
+          fillcolor = "rgba(255, 165, 0, 0.3)", 
+          line = list(width = 0)
+        ),
+        list( # Green section (66-100)
+          type = "rect",
+          x0 = min(x$Date), x1 = max(x$Date), 
+          y0 = 65, y1 = 100,
+          fillcolor = "rgba(144, 238, 144, 0.3)", 
+          line = list(width = 0)
+        )
+      )
+    )
+  
+}
+
+
+
+
+
