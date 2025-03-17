@@ -83,12 +83,14 @@ wqShp <- sf::st_read('GIS/Waterbody_IDs_(WBIDs).shp') |>
                                 '1603B', '1700', '1683', '1530','1624A', '1556A',
                                 '1716D','1701A','1701B'), 'Inactive', 
                          ifelse(Type == 'NOT SAMPLED', 'Not Sampled', 'Active')),
-    color = ifelse(Type == 'MARINE' & Status == 'Active', '#00244c',
-            ifelse(Type == 'MARINE' & Status == 'Inactive', '#6A5ACD',
-             ifelse(Type == 'LAKE', '#40E0D0', 
-              ifelse(Type %in% c('TIDAL', 'FRESHWATER') & Status == 'Active', '#006400',
-               ifelse(Type %in% c('TIDAL', 'FRESHWATER') & Status == 'Inactive', '#E69F00',
-                         'gray60'))))),
+    color = dplyr::case_when(
+      Type == 'MARINE' & Status == 'Active' ~ '#00244c',
+      Type == 'MARINE' & Status == 'Inactive' ~ '#6A5ACD',
+      Type == 'LAKE' ~ '#40E0D0',
+      Type %in% c('TIDAL', 'FRESHWATER') & Status == 'Active' ~ '#006400',
+      Type %in% c('TIDAL', 'FRESHWATER') & Status == 'Inactive' ~ '#E69F00',
+      TRUE ~ 'gray60'
+    ), 
     interactive = ifelse(WBID %in% c(1486, '1618A', '1603A'), FALSE, TRUE),
     chla_crit   = wCrit$chla_crit[match(WBID,wCrit$WBID)],
     TN_crit     = wCrit$TN_crit[match(WBID,wCrit$WBID)],
@@ -98,7 +100,6 @@ wqShp <- sf::st_read('GIS/Waterbody_IDs_(WBIDs).shp') |>
     Entero_crit = wCrit$Entero_crit[match(WBID,wCrit$WBID)],
     Area = units::set_units(sf::st_area(geometry), mi^2)
   )
-
 
 ```
 
@@ -243,9 +244,11 @@ observeEvent(input$mapplo_shape_click, {
       layerId     = 'shape',
       fillOpacity = 0.17,
       stroke      = TRUE,
-      color = ifelse(wqShp$Status[wqShp$WBID == sName] == 'Active', 'green', 
-               ifelse(wqShp$Status[wqShp$WBID == sName] == 'Inactive', 'red',
-                      'gray')), 
+      color       = dplyr::case_when(
+        wqShp$Status[wqShp$WBID == sName] == 'Active' ~ 'green',
+        wqShp$Status[wqShp$WBID == sName] == 'Inactive' ~ 'red',
+        TRUE ~ 'gray'
+      ),
       fill      = TRUE,
       fillColor = ~color,
       label     = ~ID
@@ -557,7 +560,7 @@ observeEvent(input$info, {
 # UI for the initial informational popup:
 nsModal <- modalDialog(
   title = "NOTICE",
-  HTML("<b>Pinellas County stopped water quality sampling in this area in 2012. For more recent data please contact the City of St. Petersburg Public Works at waterdept@stpete.org.</b>"),
+  HTML("<b>Pinellas County discontinued water quality sampling in this area in 2012. For more recent data please contact the City of St. Petersburg Public Works at waterdept@stpete.org.</b>"),
   easyClose = TRUE,
   footer = modalButton("Close")
 )
@@ -745,16 +748,24 @@ sliderInput('year', 'Select year range',
 
 # Update the slider with the years available at each site:
 observe({
-    updateSliderInput(
+  
+  # set the max year for the slider:
+  mxSldYr <- max(lubridate::year(getData()$Date))
+  
+  # Update the slider input with the min and max years:
+  updateSliderInput(
       session, 'year', 
       min = min(lubridate::year(getData()$Date)),
-      max = ifelse(max(lubridate::year(getData()$Date)) == lubridate::year(Sys.Date()),
-                   max(lubridate::year(getData()$Date)) - 1,
-                   max(lubridate::year(getData()$Date))),
+      max = dplyr::case_when(
+        mxSldYr == lubridate::year(Sys.Date()) ~ mxSldYr - 1,
+        TRUE ~ mxSldYr
+      ),
       value = c(min(lubridate::year(getData()$Date)),
-                ifelse(max(lubridate::year(getData()$Date)) == lubridate::year(Sys.Date()),
-                       max(lubridate::year(getData()$Date))-1,
-                       max(lubridate::year(getData()$Date))))
+                dplyr::case_when(
+                  mxSldYr == lubridate::year(Sys.Date()) ~ mxSldYr - 1,
+                  TRUE ~ mxSldYr
+                )
+           ) 
       )
   })
 
@@ -783,8 +794,10 @@ rcd <- reactive({
       dplyr::filter(Year != lubridate::year(Sys.Date())) |>
       dplyr::summarise(
         total_samples = dplyr::n(),
-        n_below = ifelse(Type == 'MARINE', length(which(DOsat < 42)),
-                         length(which(DOsat < 38)))) |>
+        n_below = dplyr::case_when(
+          Type == 'MARINE' ~ length(which(DOsat < 42)),
+          TRUE ~ length(which(DOsat < 38))
+        )) |>
       dplyr::distinct() |>
       dplyr::mutate(do_grade = ifelse((n_below/total_samples) > 0.1, 'Fail', 'Pass'))
     )
@@ -1142,193 +1155,224 @@ An increase in nutrient levels in the water can can promote the growth of algal 
 The Pass/Fail designation for each parameter is determined by calculating the annual geometric mean and then comparing it to the FDEP standard. If the value exceeds the FDEP standard, the site will get a 'Fail' for that parameter. If the value does not exceed the standard, the site will get a 'Pass'. Visit the FDEP Water Quality Standards [webpage](https://floridadep.gov/DEAR/Water-Quality-Standards){target="_blank"} for more information about specific water quality criteria throughout the state of Florida.
 
 
-Bioassessments
-===========================================================
+<!-- Bioassessments -->
+<!-- =========================================================== -->
 
-## Column {.tabset .tabset-fade data-width="220"}
+<!-- ## Column {.tabset .tabset-fade data-width="220"} -->
 
-### MAP
+<!-- ### MAP -->
 
-```{r bio map, include=FALSE}
+<!-- ```{r bio map, include=FALSE} -->
 
-Lsem <- wqShp |>
-  dplyr::filter(WBID %in% c('1618_N','1618_S')) |>
-  dplyr::summarise(geometry = sf::st_union(geometry), WBID = '1618', ID = "LAKE SEMINOLE",
-                   Type = 'LAKE') 
+<!-- Lsem <- wqShp |> -->
+<!--   dplyr::filter(WBID %in% c('1618_N','1618_S')) |> -->
+<!--   dplyr::summarise(geometry = sf::st_union(geometry), WBID = '1618', ID = "LAKE SEMINOLE", -->
+<!--                    Type = 'LAKE')  -->
 
-bios <- wqShp |>
-  dplyr::filter(WBID %in% c('1527B', '1633A',1650,'1574A', '1603D', '1486A',
-                            '1527B','1538A','1567B','1614','1567C',1643,1550,
-                            '1633E',1475,'1668A',1641,'1569A',1627,1474,1529,
-                            '1541C',1574,'1575A','1604B1')) |>
-  dplyr::bind_rows(Lsem) |>
-  dplyr::mutate(bio = ifelse(Type == 'LAKE', 'LVI', 'SCI'),
-                color = ifelse(WBID %in% c('1486A','1574A','1603D','1633A','1650',
-                                           '1618'),
-                               '#40E0D0', '#006400')) 
-
-
-# Create the base map and set options:
-f <- leaflet::leaflet(
-  options = leaflet::leafletOptions(
-    zoomControl = TRUE,
-    zoomSnap    = 0.1,
-    zoomDelta   = 1)
-  ) |>
-  leaflet::addTiles(attribution = '') |>
-  leaflet::addProviderTiles(
-    leaflet::providers$CartoDB.Positron, group = 'CartoDB.Positron'
-    ) |>
-  leaflet::addProviderTiles(
-    leaflet::providers$Esri.WorldImagery, group = 'Esri.WorldImagery'
-    ) |>
-  leaflet::addProviderTiles(
-    leaflet::providers$OpenTopoMap, group = 'OpenTopoMap'
-    ) |>
-  leaflet::setView(
-    lng  = -82.72,
-    lat  = 27.905,
-    zoom = 10.6
-    )
-
-# Iterate over each unique waterbody type and add them as separate polygon layers.
-# This will allow users to highlight specific different water types:
-for (type in unique(bios$bio)) {
-  f <- f |> leaflet::addPolygons(
-    data        = bios[bios$bio == type, ],
-    group       = type,  
-    weight      = 0.8,
-    fillOpacity = 0.3,
-    stroke      = TRUE,
-    color       = 'black',
-    opacity     = 0.7,
-    fill        = TRUE,
-    fillColor   = ~color,
-    label       = ~ID,
-    highlightOptions = leaflet::highlightOptions(
-      color = 'white', 
-      weight = 4,
-      opacity = 0.5)
-    ) 
-}
+<!-- bios <- wqShp |> -->
+<!--   dplyr::filter(WBID %in% c('1527B', '1633A',1650,'1574A', '1603D', '1486A', -->
+<!--                             '1527B','1538A','1567B','1614','1567C',1643,1550, -->
+<!--                             '1633E',1475,'1668A',1641,'1569A',1627,1474,1529, -->
+<!--                             '1541C',1574,'1575A','1604B1')) |> -->
+<!--   dplyr::bind_rows(Lsem) |> -->
+<!--   dplyr::mutate(bio = ifelse(Type == 'LAKE', 'LVI', 'SCI'), -->
+<!--                 color = ifelse(WBID %in% c('1486A','1574A','1603D','1633A','1650', -->
+<!--                                            '1618'), -->
+<!--                                '#40E0D0', '#006400'))  -->
 
 
-# Custom legend for WBID types:
-wqLeg <- leg('rect', 2, c('#40E0D0','#006400'),
-             0.5, 20, 20)
+<!-- # Create the base map and set options: -->
+<!-- f <- leaflet::leaflet( -->
+<!--   options = leaflet::leafletOptions( -->
+<!--     zoomControl = TRUE, -->
+<!--     zoomSnap    = 0.1, -->
+<!--     zoomDelta   = 1) -->
+<!--   ) |> -->
+<!--   leaflet::addTiles(attribution = '') |> -->
+<!--   leaflet::addProviderTiles( -->
+<!--     leaflet::providers$CartoDB.Positron, group = 'CartoDB.Positron' -->
+<!--     ) |> -->
+<!--   leaflet::addProviderTiles( -->
+<!--     leaflet::providers$Esri.WorldImagery, group = 'Esri.WorldImagery' -->
+<!--     ) |> -->
+<!--   leaflet::addProviderTiles( -->
+<!--     leaflet::providers$OpenTopoMap, group = 'OpenTopoMap' -->
+<!--     ) |> -->
+<!--   leaflet::setView( -->
+<!--     lng  = -82.72, -->
+<!--     lat  = 27.905, -->
+<!--     zoom = 10.6 -->
+<!--     ) -->
+
+<!-- # Iterate over each unique waterbody type and add them as separate polygon layers. -->
+<!-- # This will allow users to highlight specific different water types: -->
+<!-- for (type in unique(bios$bio)) { -->
+<!--   f <- f |> leaflet::addPolygons( -->
+<!--     data        = bios[bios$bio == type, ], -->
+<!--     group       = type,   -->
+<!--     weight      = 0.8, -->
+<!--     fillOpacity = 0.3, -->
+<!--     stroke      = TRUE, -->
+<!--     color       = 'black', -->
+<!--     opacity     = 0.7, -->
+<!--     fill        = TRUE, -->
+<!--     fillColor   = ~color, -->
+<!--     label       = ~ID, -->
+<!--     highlightOptions = leaflet::highlightOptions( -->
+<!--       color = 'white',  -->
+<!--       weight = 4, -->
+<!--       opacity = 0.5) -->
+<!--     )  -->
+<!-- } -->
 
 
-# Add other elements to the map:
-f <- f |> leaflet::addPolygons(
-  data        = bios[bios$WBID == '1486A', ],
-  layerId     = 'shape',
-  fillOpacity = 0.17,
-  stroke      = TRUE,
-  color       = 'green',
-  fill        = TRUE,
-  fillColor   = ~color,
-  label       = ~ID
-  ) |>
-  leaflet::addLayersControl(
-    position = "topleft",
-    baseGroups = c("CartoDB.Positron", "Esri.WorldImagery", "OpenTopoMap"),
-    options = leaflet::layersControlOptions(
-      collapsed = TRUE)
-    ) |>
-  leaflet::addPolygons(
-    data             = bios,
-    popup            = NULL,
-    label            = NULL,
-    highlightOptions = NULL,
-    weight           = 0.8,
-    fillOpacity      = 0.3,
-    stroke           = TRUE,
-    color            = 'black',
-    opacity          = 0.7,
-    fill             = TRUE,
-    fillColor        = ~color,
-    options          = leaflet::pathOptions(clickable = FALSE)
-    ) |>
-  leaflet::addScaleBar(
-    position = 'bottomleft'
-    ) |>
-  leaflegend::addLegendImage(
-    images      = wqLeg,
-    labels      = c('LVI','SCI'),
-    labelStyle  = "font-size: 14px;",
-    width       = 15,
-    height      = 11,
-    orientation = 'vertical',
-    title = htmltools::tags$div('Site Type',
-                                style = 'font-size: 15px; text-align: center;
-                                font-weight: bold;'),
-    position = 'bottomleft'
-    )
+<!-- # Custom legend for WBID types: -->
+<!-- wqLeg <- leg('rect', 2, c('#40E0D0','#006400'), -->
+<!--              0.5, 20, 20) -->
 
 
-biomap <- leaflet::leafletProxy('biomap')
-
-# Change the highlighted WBID based on user click:
-observeEvent(input$biomap_shape_click, {
-  sName <- getStrata(
-    spDat = bios,
-    lat   = input$biomap_shape_click$lat,
-    lng   = input$biomap_shape_click$lng
-    )
-  
-  # If sName is NULL or invalid, just return and do nothing
-  if (is.null(sName) || length(sName) == 0 || is.na(sName)) return()
-  
-  # Highlight the clicked WBID:
-  biomap <- biomap |>
-    leaflet::removeShape('shape') |>
-    leaflet::addPolygons(
-      data        = dplyr::filter(bios, WBID == sName),
-      layerId     = 'shape',
-      fillOpacity = 0.17,
-      stroke      = TRUE,
-      fill      = TRUE,
-      fillColor = ~color,
-      label     = ~ID
-      )
-  })
-```
-
-```{r}
-# Get water quality map:
-output$biomap <- leaflet::renderLeaflet(f)
-
-
-# Display the map and info button:
-fillCol(flex = 1,
-        leaflet::leafletOutput('biomap'))
-```
-
-
-
-## Column {.tabset .tabset-fade data-width="550"}
-
-### SCI
-
-```{r SCI data}
-
-sci <- readxl::read_excel('Data/Pinellas_SCI.xlsx') |>
-  dplyr::mutate(Date = as.numeric(Date),
-                Date = as.Date(Date, origin = '1899-12-30')) |>
-  dplyr::filter(WBID == '1604B1') |>
-  tidyr::drop_na(Date, `SCI Score`) |>
-  dplyr::group_by(Segment, WBID, Date) |>
-  dplyr::summarise(`SCI Score` = mean(`SCI Score`, na.rm = TRUE)) 
+<!-- # Add other elements to the map: -->
+<!-- f <- f |> leaflet::addPolygons( -->
+<!--   data        = bios[bios$WBID == '1474', ], -->
+<!--   layerId     = 'shape', -->
+<!--   fillOpacity = 0.17, -->
+<!--   stroke      = TRUE, -->
+<!--   color       = 'blue', -->
+<!--   fill        = TRUE, -->
+<!--   fillColor   = ~color, -->
+<!--   label       = ~ID -->
+<!--   ) |> -->
+<!--   leaflet::addLayersControl( -->
+<!--     position = "topleft", -->
+<!--     baseGroups = c("CartoDB.Positron", "Esri.WorldImagery", "OpenTopoMap"), -->
+<!--     options = leaflet::layersControlOptions( -->
+<!--       collapsed = TRUE) -->
+<!--     ) |> -->
+<!--   leaflet::addPolygons( -->
+<!--     data             = bios, -->
+<!--     popup            = NULL, -->
+<!--     label            = NULL, -->
+<!--     highlightOptions = NULL, -->
+<!--     weight           = 0.8, -->
+<!--     fillOpacity      = 0.3, -->
+<!--     stroke           = TRUE, -->
+<!--     color            = 'black', -->
+<!--     opacity          = 0.7, -->
+<!--     fill             = TRUE, -->
+<!--     fillColor        = ~color, -->
+<!--     options          = leaflet::pathOptions(clickable = FALSE) -->
+<!--     ) |> -->
+<!--   leaflet::addScaleBar( -->
+<!--     position = 'bottomleft' -->
+<!--     ) |> -->
+<!--   leaflegend::addLegendImage( -->
+<!--     images      = wqLeg, -->
+<!--     labels      = c('LVI','SCI'), -->
+<!--     labelStyle  = "font-size: 14px;", -->
+<!--     width       = 15, -->
+<!--     height      = 11, -->
+<!--     orientation = 'vertical', -->
+<!--     title = htmltools::tags$div('Site Type', -->
+<!--                                 style = 'font-size: 15px; text-align: center; -->
+<!--                                 font-weight: bold;'), -->
+<!--     position = 'bottomleft' -->
+<!--     ) -->
 
 
-sciPlt(sci)
+<!-- biomap <- leaflet::leafletProxy('biomap') -->
 
-```
+<!-- # Change the highlighted WBID based on user click: -->
+<!-- observeEvent(input$biomap_shape_click, { -->
+<!--   sName <- getStrata( -->
+<!--     spDat = bios, -->
+<!--     lat   = input$biomap_shape_click$lat, -->
+<!--     lng   = input$biomap_shape_click$lng -->
+<!--     ) -->
 
-### LVI
+<!--   # If sName is NULL or invalid, just return and do nothing -->
+<!--   if (is.null(sName) || length(sName) == 0 || is.na(sName)) return() -->
+
+<!--   # Highlight the clicked WBID: -->
+<!--   biomap <- biomap |> -->
+<!--     leaflet::removeShape('shape') |> -->
+<!--     leaflet::addPolygons( -->
+<!--       data        = dplyr::filter(bios, WBID == sName), -->
+<!--       layerId     = 'shape', -->
+<!--       fillOpacity = 0.17, -->
+<!--       stroke      = TRUE, -->
+<!--       fill      = TRUE, -->
+<!--       fillColor = ~color, -->
+<!--       label     = ~ID -->
+<!--       ) -->
+<!--   }) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- # Get water quality map: -->
+<!-- output$biomap <- leaflet::renderLeaflet(f) -->
 
 
+<!-- # Display the map and info button: -->
+<!-- fillCol(flex = 1, -->
+<!--         leaflet::leafletOutput('biomap')) -->
+<!-- ``` -->
 
+<!-- ### USING THIS TAB -->
+
+<!-- ### BACKGROUND -->
+
+<!-- ## Column {.tabset .tabset-fade data-width="550"} -->
+
+<!-- ### Bioassessment Data -->
+
+<!-- ```{r SCI data} -->
+
+<!-- sci <- readxl::read_excel('Data/Pinellas_SCI.xlsx') |> -->
+<!--   dplyr::mutate(Date = as.numeric(Date), -->
+<!--                 Date = as.Date(Date, origin = '1899-12-30'), -->
+<!--                 Bio = 'SCI Score') |> -->
+<!--   dplyr::rename(Score = `SCI Score`) |> -->
+<!--   tidyr::drop_na(Date, Score) |> -->
+<!--   dplyr::group_by(Segment, WBID, Date, Bio) |> -->
+<!--   dplyr::summarise(Score = mean(Score, na.rm = TRUE)) -->
+
+<!-- lvi <- readxl::read_excel('Data/Pinellas_LVI.xlsx') |> -->
+<!--   dplyr::mutate(Date = as.Date(Date), -->
+<!--                 Bio = 'LVI Score') |> -->
+<!--   dplyr::rename(Score = `LVI Score`) |> -->
+<!--   tidyr::drop_na(Date, Score) |> -->
+<!--   dplyr::group_by(Segment, WBID, Date, Bio) |> -->
+<!--   dplyr::summarise(Score = mean(Score, na.rm = TRUE)) -->
+
+
+<!-- bioData <- dplyr::bind_rows(sci,lvi) -->
+
+
+<!-- # Get data for each WBID based on user click: -->
+<!-- getBio <- reactive({ -->
+<!--   if (is.null(input$biomap_shape_click)){ -->
+<!--     strat <- '1474' -->
+<!--     } else { -->
+<!--       strat <- getStrata( -->
+<!--         spDat = bios, -->
+<!--         lat   = input$biomap_shape_click$lat, -->
+<!--         lng   = input$biomap_shape_click$lng -->
+<!--         ) -->
+<!--     } -->
+<!--   data <- dplyr::filter(bioData, WBID == strat) -->
+<!--   return(data) -->
+<!--   }) -->
+
+
+<!-- bioP <- reactive({ -->
+<!--   return(bioPlt(getBio(), bio = ifelse(getBio()$Bio[1] =='SCI Score', 'SCI', 'LVI'))) -->
+<!-- }) -->
+
+
+<!-- fillCol(flex = 1, -->
+<!--         plotly::renderPlotly(bioP())) -->
+
+<!-- ``` -->
 
 
 
@@ -1368,15 +1412,22 @@ knitr::include_graphics('www/entero.png')
 ```{r}
 
 # Read in red tide and entero data and set limits for color coding:
-dat <- readxl::read_excel('Data/Pinellas_RedTide_Entero.xlsx') |>
-  dplyr::mutate(`Karenia brevis` = stringr::str_to_title(`Karenia brevis`),
-    Color = ifelse(`Karenia brevis` < 1000, "#878686",
-                 ifelse(`Karenia brevis` %in% seq(1000,10000), "white", 
-                 ifelse(`Karenia brevis` %in% seq(10001,100000), "yellow",
-                 ifelse(`Karenia brevis` %in% seq(100001,1000000), "orange",
-                 ifelse(`Karenia brevis` %in% seq(1000001,10000000), "red","black"))))),
-    bact = ifelse(Enterococcus <= 35, 'green',
-           ifelse(Enterococcus >= 36 & Enterococcus <= 70, 'yellow', 'red')),
+dat <- readxl::read_excel('Data/Pinellas_RedTide_Entero.xlsx', guess_max = 50000) |>
+  dplyr::mutate(
+    `Karenia brevis` = stringr::str_to_title(`Karenia brevis`),
+    Color = dplyr::case_when(
+      `Karenia brevis` < 1000 ~ '#878686',
+      `Karenia brevis` >= 1000 & `Karenia brevis` <= 10000 ~ 'white',
+      `Karenia brevis` >= 10001 & `Karenia brevis` <= 100000 ~ 'yellow',
+      `Karenia brevis` >= 100001 & `Karenia brevis` <= 1000000 ~ 'orange',
+      `Karenia brevis` >= 1000001 & `Karenia brevis` <= 10000000 ~ 'red',
+      TRUE ~ 'black'
+    ),
+    bact = dplyr::case_when(
+      Enterococcus <= 35 ~ 'green',
+      Enterococcus >= 36 & Enterococcus <= 70 ~ 'yellow',
+      TRUE ~ 'red'
+    ),
     Date = format(Date, '%m/%d/%Y'))
 
 ```
