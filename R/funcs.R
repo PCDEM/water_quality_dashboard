@@ -787,85 +787,137 @@ table_row <- function(label, value, bg_color, color = "black") {
   )
 }
 
-# Generate the entire table popup
+# Generate the entire table popup with conditional rows
 create_popup <- function(ID, REGION, HUC, WBID, Area, CLASS, Type, Status, DO_crit,
                          chla_crit, TN_crit, TP_crit, Ecoli_crit, Entero_crit) {
+  
+  # Ensure Type is a single character value
+  Type <- as.character(Type[1])  
   
   # Table row colors
   c1 <- '#dbe6f3'
   c2 <- '#f0f4fb'
   
-  paste0(
+  # Start building the popup content
+  popup_content <- paste0(
     "<div style='font-family: Arial; font-size: 12px; padding: 5px;'>",
     "<b>", ID, "</b><br>",
     "<table style='border-collapse: collapse; width: 100%; font-size: 12px; line-height: 1; border: 1px solid black;'>",
     
     table_row("Sampling Status", Status, c1, 
-          ifelse(Status == "Active", "green", ifelse(Status == "Inactive", "red", "black"))),
+              ifelse(Status == "Active", "green", ifelse(Status == "Inactive", "red", "black"))),
     table_row("Region", REGION, c1),
     table_row("HUC", HUC, c2),
     table_row("WBID", WBID, c1),
     table_row("Area", paste(round(Area,1), "sq. mi."), c2),
-    table_row("Class", CLASS, c1),
-    table_row("Water Type", stringr::str_to_title(Type), c2),
-    table_row("FDEP DO Limit", paste(DO_crit, ifelse(is.na(DO_crit), "", "mg/L")), c1),
-    table_row("FDEP Chl-a Limit", paste(chla_crit, ifelse(is.na(chla_crit), "", "µg/L")), c2),
-    table_row("FDEP TN Limit", paste(TN_crit, ifelse(is.na(TN_crit), "", "mg/L")), c1),
-    table_row("FDEP TP Limit", paste(TP_crit, ifelse(is.na(TP_crit), "", "mg/L")), c2),
-    table_row("FDEP E. coli Limit", paste(Ecoli_crit, ifelse(is.na(Ecoli_crit), "", "MPN/100mL")), c1),
-    table_row("FDEP Enterococci Limit", paste(Entero_crit, ifelse(is.na(Entero_crit), "", "MPN/100mL")), c2),
-    
-    "</table></div>"
+    table_row("Class", CLASS, c1)
   )
+  
+  # Only add FDEP Limits if Type is NOT "NOT SAMPLED"
+  if (!identical(Type, "NOT SAMPLED")) {
+    popup_content <- paste0(popup_content,
+                            table_row("Water Type", stringr::str_to_title(Type), c2),
+                            table_row("FDEP DO Limit", paste0(DO_crit, ifelse(is.na(DO_crit), "", "% sat")), c1),
+                            table_row("FDEP Chl-a Limit", paste(chla_crit, ifelse(is.na(chla_crit), "", "µg/L")), c2),
+                            table_row("FDEP TN Limit", paste(TN_crit, ifelse(is.na(TN_crit), "", "mg/L")), c1),
+                            table_row("FDEP TP Limit", paste(TP_crit, ifelse(is.na(TP_crit), "", "mg/L")), c2)
+    )
+    
+    # Conditionally add bacteria limits
+    if (identical(Type, "FRESHWATER")) {
+      popup_content <- paste0(popup_content, 
+                              table_row("FDEP E. coli Limit", paste(Ecoli_crit, ifelse(is.na(Ecoli_crit), "", "MPN/100mL")), c1))
+    } else if (identical(Type, "TIDAL")) {
+      popup_content <- paste0(popup_content, 
+                              table_row("FDEP Enterococci Limit", paste(Entero_crit, ifelse(is.na(Entero_crit), "", "MPN/100mL")), c2))
+    }
+  }
+  
+  # Close the table and div
+  popup_content <- paste0(popup_content, "</table></div>")
+  
+  return(popup_content)
 }
 
 
-sciPlt <- function(x){
-
+# Function to generate plot for SCI data:
+bioPlt <- function(x, bio){
   
+  # Define background color shapes based on 'bio' input
+  shapes <- if (bio == 'SCI') {
+    list(
+      list( # Red section (0-40)
+        type = "rect",
+        x0 = min(x$Date)-150, x1 = max(x$Date)+100,
+        y0 = 0, y1 = 40,
+        fillcolor = "rgba(255, 102, 102, 0.3)", 
+        line = list(width = 0)
+      ),
+      list( # Orange section (41-65)
+        type = "rect",
+        x0 = min(x$Date)-150, x1 = max(x$Date)+100,
+        y0 = 40, y1 = 65,
+        fillcolor = "rgba(255, 255, 153, 0.3)", 
+        line = list(width = 0)
+      ),
+      list( # Green section (66-100)
+        type = "rect",
+        x0 = min(x$Date)-150, x1 = max(x$Date)+100,
+        y0 = 65, y1 = 100,
+        fillcolor = "rgba(144, 238, 144, 0.3)", 
+        line = list(width = 0)
+      )
+    )
+  } else {
+    list(
+      list( # Light yellow section (0-42)
+        type = "rect",
+        x0 = min(x$Date)-150, x1 = max(x$Date)+100,
+        y0 = 0, y1 = 42,
+        fillcolor = "rgba(255, 255, 153, 0.3)", # Light Yellow
+        line = list(width = 0)
+      ),
+      list( # Light green section (42-100)
+        type = "rect",
+        x0 = min(x$Date)-150, x1 = max(x$Date)+100,
+        y0 = 42, y1 = 100,
+        fillcolor = "rgba(144, 238, 144, 0.3)", # Light Green
+        line = list(width = 0)
+      )
+    )
+  }
+  
+  # Create the plot
   plotly::plot_ly(
-    data = x,
+    data = data.frame(x),
     type = 'scatter',
     mode = 'markers+lines',
     x = ~Date,
-    y = ~`SCI Score`,
+    y = ~Score,
     hoverinfo = 'text',
-    text = ~paste('SCI: ', `SCI Score`, '<br>Date: ', Date)
+    text = ~paste(ifelse(bio == 'SCI','SCI: ','LVI: '), Score, '<br>Date: ', Date)
   ) |>
     plotly::layout(
-      title = paste("Stream Condition Index (SCI) Scores for", stringr::str_to_title(x$Segment[1])),
-      xaxis = list(title = "Sample Date", range = c(min(x$Date),max(x$Date)), showgrid = FALSE),
-      yaxis = list(title = "Stream Condition Index", range = c(0, 100), showgrid = FALSE),
+      title = paste(ifelse(bio == 'SCI','Stream Condition Index (SCI)',
+                           'Lake Vegetative Index (LVI)'), "Score for", stringr::str_to_title(x$Segment[1])),
+      xaxis = list(
+        title = "Sample Date", 
+        range = c(min(x$Date)-75,max(x$Date)+75),
+        showgrid = FALSE,
+        showline = TRUE,
+        linewidth = 2,
+        linecolor = 'black',
+        mirror = TRUE),
       
-      # Define colored background sections
-      shapes = list(
-        list( # Red section (0-40)
-          type = "rect",
-          x0 = min(x$Date), x1 = max(x$Date),  
-          y0 = 0, y1 = 40,
-          fillcolor = "rgba(255, 102, 102, 0.3)", 
-          line = list(width = 0)
-        ),
-        list( # Orange section (41-65)
-          type = "rect",
-          x0 = min(x$Date), x1 = max(x$Date), 
-          y0 = 40, y1 = 65,
-          fillcolor = "rgba(255, 165, 0, 0.3)", 
-          line = list(width = 0)
-        ),
-        list( # Green section (66-100)
-          type = "rect",
-          x0 = min(x$Date), x1 = max(x$Date), 
-          y0 = 65, y1 = 100,
-          fillcolor = "rgba(144, 238, 144, 0.3)", 
-          line = list(width = 0)
-        )
-      )
+      yaxis = list(
+        title = "Index Score", 
+        range = c(0, 100),
+        showline = TRUE,
+        linewidth = 2,
+        linecolor = 'black',
+        mirror = TRUE),
+      
+      shapes = shapes  # Apply the conditional shapes list
     )
-  
 }
-
-
-
-
 
