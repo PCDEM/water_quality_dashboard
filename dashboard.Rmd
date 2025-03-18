@@ -1167,7 +1167,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!-- Lsem <- wqShp |> -->
 <!--   dplyr::filter(WBID %in% c('1618_N','1618_S')) |> -->
 <!--   dplyr::summarise(geometry = sf::st_union(geometry), WBID = '1618', ID = "LAKE SEMINOLE", -->
-<!--                    Type = 'LAKE')  -->
+<!--                    Type = 'LAKE') -->
 
 <!-- bios <- wqShp |> -->
 <!--   dplyr::filter(WBID %in% c('1527B', '1633A',1650,'1574A', '1603D', '1486A', -->
@@ -1178,7 +1178,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--   dplyr::mutate(bio = ifelse(Type == 'LAKE', 'LVI', 'SCI'), -->
 <!--                 color = ifelse(WBID %in% c('1486A','1574A','1603D','1633A','1650', -->
 <!--                                            '1618'), -->
-<!--                                '#40E0D0', '#006400'))  -->
+<!--                                '#40E0D0', '#006400')) -->
 
 
 <!-- # Create the base map and set options: -->
@@ -1209,7 +1209,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!-- for (type in unique(bios$bio)) { -->
 <!--   f <- f |> leaflet::addPolygons( -->
 <!--     data        = bios[bios$bio == type, ], -->
-<!--     group       = type,   -->
+<!--     group       = type, -->
 <!--     weight      = 0.8, -->
 <!--     fillOpacity = 0.3, -->
 <!--     stroke      = TRUE, -->
@@ -1218,11 +1218,13 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--     fill        = TRUE, -->
 <!--     fillColor   = ~color, -->
 <!--     label       = ~ID, -->
+<!--     popup       = ~create_popup(ID, REGION, HUC, WBID, Area, CLASS, Type, Status, -->
+<!--                             wq = FALSE), -->
 <!--     highlightOptions = leaflet::highlightOptions( -->
-<!--       color = 'white',  -->
+<!--       color = 'white', -->
 <!--       weight = 4, -->
 <!--       opacity = 0.5) -->
-<!--     )  -->
+<!--     ) -->
 <!-- } -->
 
 
@@ -1415,6 +1417,8 @@ knitr::include_graphics('www/entero.png')
 dat <- readxl::read_excel('Data/Pinellas_RedTide_Entero.xlsx', guess_max = 50000) |>
   dplyr::mutate(
     `Karenia brevis` = stringr::str_to_title(`Karenia brevis`),
+    `Karenia brevis` = as.numeric(`Karenia brevis`),
+    Enterococcus = as.numeric(Enterococcus),
     Color = dplyr::case_when(
       `Karenia brevis` < 1000 ~ '#878686',
       `Karenia brevis` >= 1000 & `Karenia brevis` <= 10000 ~ 'white',
@@ -1439,19 +1443,21 @@ dat <- readxl::read_excel('Data/Pinellas_RedTide_Entero.xlsx', guess_max = 50000
 
 ```{r}
 
+# Get unique red tide sampling dates and create a date picker:
 rdate <- dat |>
   dplyr::mutate(Date = as.Date(Date, format('%m/%d/%Y'))) |>
   tidyr::drop_na(`Karenia brevis`) |>
   dplyr::select(Date) |>
   unique()
 
+# Create a sequence of dates not in the dataset for the date picker:
 rd <- seq.Date(rdate$Date[1], rdate$Date[length(rdate$Date)], by = 'day')
 rd <- rd[! rd %in% rdate$Date]
 
 # UI for date input and buttons
 shinyjs::useShinyjs()  # Enable shinyjs
 
-
+# Make date picker to display red tide data
 fluidRow(
   column(12,
          # Wrap the date picker and button in a container
@@ -1531,57 +1537,57 @@ rtLeg <- leg('circle', 5, c('#878686', 'white', 'yellow', 'orange', 'red'), 0.8,
 
 rtm <- reactive({
   
+  # Filter data based on selected date
   rDat <- dat |>
     dplyr::mutate(Date = as.Date(Date, format('%m/%d/%Y'))) |>
     dplyr::filter(Date == input$rdate) |>
     tidyr::drop_na(`Karenia brevis`)
   
-
-# Make red tide map
-rtm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
-  leaflet::addProviderTiles(leaflet::providers$CartoDB.VoyagerLabelsUnder) |>
-  leaflet::setView(
-    lng  = -82.72, 
-    lat  = 27.905, 
-    zoom = 10
-  ) |>
-  leaflet::addCircleMarkers(
-    data         = rDat, 
-    lng          = ~Longitude, 
-    lat          = ~Latitude, 
-    color        = 'black',
-    radius       = 6, 
-    fill         = TRUE,
-    fillColor    = ~Color, 
-    stroke       = TRUE, 
-    weight       = 1.5,
-    fillOpacity  = 1,
-    label        = ~Site,
-    labelOptions = leaflet::labelOptions(
-      textsize = "14px"
-    ),
-    popup = ~paste("<u><b>Red Tide Monitoring</b></u>", "<br>",
-                   "Sample Result: ", `Karenia brevis`,"cells/L","<br>",
-                   "Location: ", Site, "<br>",
-                   "Sample Date: ", Date)
+  # Make red tide map
+  rtm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
+    leaflet::addProviderTiles(leaflet::providers$CartoDB.VoyagerLabelsUnder) |>
+    leaflet::setView(
+      lng  = -82.72, 
+      lat  = 27.905, 
+      zoom = 10
     ) |>
-  leaflegend::addLegendImage(
-    images      = rtLeg,
-    labels      = c('Not Present/Background (0-1,000)', 'Very Low (>1,000-10,000)', 
-                    'Low (>10,000-100,000)', 'Medium (>100,000-1,000,000)', 
-                    'High (>1,000,000)'),
-    labelStyle  = "font-size: 12px;",
-    width       = 20,
-    height      = 15,
-    orientation = 'vertical',
-    title = htmltools::tags$div(tags$em('Karenia brevis'),'(cells/L)',
-                                style = 'font-size: 15px; text-align: center;
-                                font-weight: bold;'),
-    position = 'topright'
-    ) |>
-  leaflet::addScaleBar(
-    position = 'bottomleft'
-    )
+    leaflet::addCircleMarkers(
+      data         = rDat, 
+      lng          = ~Longitude, 
+      lat          = ~Latitude, 
+      color        = 'black',
+      radius       = 6, 
+      fill         = TRUE,
+      fillColor    = ~Color, 
+      stroke       = TRUE, 
+      weight       = 1.5,
+      fillOpacity  = 1,
+      label        = ~Site,
+      labelOptions = leaflet::labelOptions(
+        textsize = "14px"
+      ),
+      popup = ~paste("<u><b>Red Tide Monitoring</b></u>", "<br>",
+                     "Sample Result: ", `Karenia brevis`,"cells/L","<br>",
+                     "Location: ", Site, "<br>",
+                     "Sample Date: ", Date)
+      ) |>
+    leaflegend::addLegendImage(
+      images      = rtLeg,
+      labels      = c('Not Present/Background (0-1,000)', 'Very Low (>1,000-10,000)', 
+                      'Low (>10,000-100,000)', 'Medium (>100,000-1,000,000)', 
+                      'High (>1,000,000)'),
+      labelStyle  = "font-size: 12px;",
+      width       = 20,
+      height      = 15,
+      orientation = 'vertical',
+      title = htmltools::tags$div(tags$em('Karenia brevis'),'(cells/L)',
+                                  style = 'font-size: 15px; text-align: center;
+                                  font-weight: bold;'),
+      position = 'topright'
+      ) |>
+    leaflet::addScaleBar(
+      position = 'bottomleft'
+      )
 })
 
 rtmap <- leaflet::leafletProxy('rtmap')
@@ -1591,7 +1597,6 @@ output$rtmap <- leaflet::renderLeaflet(rtm())
 # Display the red tide map:
 fillCol(flex = 0.9,
         leaflet::leafletOutput('rtmap'))
-
   
 ```
 
@@ -1602,20 +1607,21 @@ fillCol(flex = 0.9,
 
 ```{r}
 
+# Get unique bacteria sampling dates and create a date picker:
 bdate <- dat |>
   dplyr::mutate(Date = as.Date(Date, format('%m/%d/%Y'))) |>
   tidyr::drop_na(Enterococcus) |>
   dplyr::select(Date) |>
   unique()
 
+# Create a sequence of dates not in the dataset for the date picker:
 bd <- seq.Date(bdate$Date[1], bdate$Date[length(bdate$Date)], by = 'day')
 bd <- bd[! bd %in% bdate$Date]
-
 
 # UI for date input and buttons
 shinyjs::useShinyjs()  # Enable shinyjs
 
-
+# Make date picker to display bacteria data
 fluidRow(
   column(12,
          # Wrap the date picker and button in a container
@@ -1642,7 +1648,6 @@ fluidRow(
              actionButton("next_date", label = HTML("Next <i class='fa fa-arrow-right'></i>")))
   )
 )
-
 
 # Server logic to handle date updates with edge case handling
 observe({
@@ -1688,65 +1693,64 @@ observeEvent(input$next_date, {
   }
 })
 
-
 # Bacteria legend:
 bLeg <- leg('circle', 3, c('green','yellow','red'), 0.8, 15, 20)
 
-
+# Make bacteria map
 bm <- reactive({
   
+  # Filter data based on selected date
   bDat <- dat |>
     dplyr::mutate(Date = as.Date(Date, format('%m/%d/%Y'))) |>
     dplyr::filter(Date == input$bdate) |>
     tidyr::drop_na(Enterococcus)
 
-# Make bacteria map
-bm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
-  leaflet::addProviderTiles(leaflet::providers$CartoDB.VoyagerLabelsUnder) |>
-  leaflet::setView(
-    lng  = -82.72, 
-    lat  = 27.905, 
-    zoom = 10
-  ) |>
-  leaflet::addCircleMarkers(
-    data         = bDat,
-    lng          = ~Longitude,
-    lat          = ~Latitude,
-    color        = 'black',
-    radius       = 6,
-    fill         = TRUE,
-    fillColor    = ~bact,
-    stroke       = TRUE,
-    weight       = 1.5,
-    fillOpacity  = 1,
-    label        = ~Site,
-    labelOptions = leaflet::labelOptions(
-      textsize = "14px"
-    ),
-    popup = ~paste("<u><b>Bacteria Monitoring (Enterococcus)</b></u>", "<br>",
-                   "Sample Result: ", Enterococcus, "MPN/100mL","<br>",
-                   "Location: ", Site, "<br>",
-                   "Sample Date: ", Date)
+  # Make bacteria map
+  bm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
+    leaflet::addProviderTiles(leaflet::providers$CartoDB.VoyagerLabelsUnder) |>
+    leaflet::setView(
+      lng  = -82.72, 
+      lat  = 27.905, 
+      zoom = 10
     ) |>
-  leaflegend::addLegendImage(
-    images      = bLeg,
-    labels      = c('Good (<35)','Moderate (36-70)', 'Poor (>70)'),
-    labelStyle  = "font-size: 12px;",
-    width       = 20,
-    height      = 15,
-    orientation = 'vertical',
-    title = htmltools::tags$div(tags$em('Enterococcus'), '(MPN/100mL)',
-                                style = 'font-size: 15px; text-align: center;
-                                font-weight: bold;'),
-    position = 'topright'
-    ) |>
-  leaflet::addScaleBar(
-    position = 'bottomleft'
-    ) 
+    leaflet::addCircleMarkers(
+      data         = bDat,
+      lng          = ~Longitude,
+      lat          = ~Latitude,
+      color        = 'black',
+      radius       = 6,
+      fill         = TRUE,
+      fillColor    = ~bact,
+      stroke       = TRUE,
+      weight       = 1.5,
+      fillOpacity  = 1,
+      label        = ~Site,
+      labelOptions = leaflet::labelOptions(
+        textsize = "14px"
+      ),
+      popup = ~paste("<u><b>Bacteria Monitoring (Enterococcus)</b></u>", "<br>",
+                     "Sample Result: ", Enterococcus, "MPN/100mL","<br>",
+                     "Location: ", Site, "<br>",
+                     "Sample Date: ", Date)
+      ) |>
+    leaflegend::addLegendImage(
+      images      = bLeg,
+      labels      = c('Good (<35)','Moderate (36-70)', 'Poor (>70)'),
+      labelStyle  = "font-size: 12px;",
+      width       = 20,
+      height      = 15,
+      orientation = 'vertical',
+      title = htmltools::tags$div(tags$em('Enterococcus'), '(MPN/100mL)',
+                                  style = 'font-size: 15px; text-align: center;
+                                  font-weight: bold;'),
+      position = 'topright'
+      ) |>
+    leaflet::addScaleBar(
+      position = 'bottomleft'
+      ) 
 })
 
 bmap <- leaflet::leafletProxy('bmap')
-
 
 output$bmap <- leaflet::renderLeaflet(bm())
 
@@ -1790,8 +1794,10 @@ Data Download
 
 # Get data for download
 datWB <- reactive({
-  return(dat <- wqInit |>
-           dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()]))
+  dat <- wqInit |>
+           dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()])
+  return(dat)
+  
   })
 
 # Create a reactive table:
@@ -1821,18 +1827,82 @@ output$datFull <- downloadHandler(
 output$datSel <- downloadHandler(
   filename = function(){paste0('Pinellas_County_',site(),'_Water_Quality_Data.xlsx')},
   content = function(file){
-    openxlsx::write.xlsx(datWB(), file)
+    
+    units <- readxl::read_excel('Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx',
+                          sheet = 'Units')
+    quals <- readxl::read_excel('Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx',
+                          sheet = 'Qualifier Codes')
+    
+    sheets <- list('Water Quality Data' = datWB(), 'Units' = units, 'Qualifiers' = quals)
+    
+    openxlsx::write.xlsx(sheets, file)
   }
 )
 
-# Data download button:
-fillCol(flex = c(0.06,0.05, 1),
-  shinyWidgets::downloadBttn('datFull', paste0('Download Period of Record Data (',
-                                              round(file.size('Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx')/(1024^2),1),' Mb)'), 
-                             style = 'simple', block = TRUE, color = 'success'),
-  shinyWidgets::downloadBttn('datSel', 'Download Selected Site Data', 
-                             style = 'simple', block = TRUE, color = 'success'),
+
+fillCol(
+  flex = c(0.07, 1),
+
+  # Row for download buttons (side by side)
+  fluidRow(
+    column(6, shinyWidgets::downloadBttn('datSel', 'Download Selected Site Data',
+                                     style = 'simple', block = TRUE, color = 'success')),
+    column(6, shinyWidgets::downloadBttn('datFull', paste0('Download All Site Data (',
+                          round(file.size('Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx')/(1024^2),1),' Mb)'),
+                                         style = 'simple', block = TRUE, color = 'success'))
+  ),
+
+  # Reactable table remains unchanged
   reactable::renderReactable(tab())
-  )
+)
+
+
+```
+
+### Red Tide & Beach Bacteria
+
+```{r}
+# Get data for download
+RTwb <- reactive({
+  dat <- dat <- readxl::read_excel('Data/Pinellas_RedTide_Entero.xlsx', guess_max = 50000) |>
+    dplyr::mutate(Date = as.Date(Date))
+  return(dat)
+  
+  })
+
+# Create a reactive table:
+RTtab <- reactive({
+  dat <- RTwb()
+    out <- reactable::reactable(
+      dat,
+      defaultColDef = reactable::colDef(
+        footerStyle = list(fontWeight = "bold"),
+        format      = reactable::colFormat(digits = 2, separators = FALSE),
+        resizable   = TRUE
+        ),
+      filterable = TRUE,
+      defaultPageSize = 50
+      )
+    return(out)
+    })
+
+# Data download:
+output$datRTFull <- downloadHandler(
+  filename = function(){'Data/Pinellas_RedTide_Entero.xlsx'},
+  content = function(file){
+    file.copy('Data/Pinellas_RedTide_Entero.xlsx',file)
+  }
+)
+
+
+fillCol(flex = c(0.07, 1),
+ shinyWidgets::downloadBttn('datRTFull', paste0('Download Red Tide/Bacteria Data (',
+                          round(file.size('Data/Pinellas_RedTide_Entero.xlsx')/(1024^2),1),' Mb)'),
+                                         style = 'simple', block = TRUE, color = 'success'),
+
+  # Reactable table remains unchanged
+  reactable::renderReactable(RTtab())
+)
+
 
 ```
