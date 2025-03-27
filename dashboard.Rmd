@@ -23,7 +23,8 @@ resource_files:
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 
 # Set na.rm = TRUE for mean
-mean_n <- purrr::partial(mean, na.rm = TRUE)
+meanNA <- purrr::partial(mean, na.rm = TRUE)
+geomNA <- purrr::partial(psych::geometric.mean, na.rm = TRUE)
 
 # Get functions
 source('R/funcs.R')
@@ -51,21 +52,20 @@ wCrit <- readxl::read_excel('Data/WBID_criteria.xlsx', sheet = 'Criteria')
 # data used to generate plots in the dashboard):
 wqM <- wqIn |>
   dplyr::filter(Level == 'Surface') |>
-  dplyr::mutate(TN = TKN + NOX,
-                Date = as.Date(Date)) |>
-  dplyr::group_by(WBID, Date, Segment,Type) |>
+  dplyr::mutate(TN = TKN + NOX) |>
+  dplyr::group_by(WBID, Date, Segment, Type) |>
   dplyr::summarise(
-            DO        = mean_n(`DO%`),
-            chl_a     = mean_n(`Chl-a`),
-            TN        = mean_n(TN),
-            TP        = mean_n(TP),
-            TSS       = mean_n(TSS),
-            Turbidity = mean_n(Turbidity),
-            Secchi    = mean_n(Secchi),
-            Temp      = mean_n(Temp_Water),
-            Salinity  = mean_n(Salinity),
-            Ecoli     = mean_n(E_coli),
-            Entero    = mean_n(Enterococci)
+            DO        = meanNA(`DO%`),
+            chl_a     = meanNA(`Chl-a`),
+            TN        = meanNA(TN),
+            TP        = meanNA(TP),
+            TSS       = meanNA(TSS),
+            Turbidity = meanNA(Turbidity),
+            Secchi    = meanNA(Secchi),
+            Temp      = meanNA(Temp_Water),
+            Salinity  = meanNA(Salinity),
+            Ecoli     = meanNA(E_coli),
+            Entero    = meanNA(Enterococci)
             ) |>
   dplyr::ungroup()
 
@@ -99,7 +99,13 @@ wqShp <- sf::st_read('GIS/Waterbody_IDs_(WBIDs).shp') |>
     Ecoli_crit  = wCrit$Ecoli_crit[match(WBID,wCrit$WBID)],
     Entero_crit = wCrit$Entero_crit[match(WBID,wCrit$WBID)],
     Area = units::set_units(sf::st_area(geometry), mi^2)
-  )
+  ) |>
+  dplyr::left_join(
+    wqIn |> 
+      dplyr::select(Basin = Site, WBID) |>
+      dplyr::mutate(Basin = substr(Basin,1,2)) |>
+      dplyr::distinct(), by = 'WBID'
+    )
 
 ```
 
@@ -142,9 +148,9 @@ for (type in unique(wqShp$Type)) {
     fill        = TRUE,
     fillColor   = ~color,
     label       = ~ID,
-    popup       = ~create_popup(ID, REGION, HUC, WBID, Area, CLASS, Type, Status,
-                                DO_crit, chla_crit, TN_crit, TP_crit, Ecoli_crit,
-                                Entero_crit),
+    popup       = ~create_popup(ID, REGION, Basin, HUC, WBID, Area, CLASS, Type, 
+                                Status, DO_crit, chla_crit, TN_crit, TP_crit, 
+                                Ecoli_crit, Entero_crit),
     highlightOptions = leaflet::highlightOptions(
       color = 'white', 
       weight = 4,
@@ -153,20 +159,27 @@ for (type in unique(wqShp$Type)) {
 }
 
 # Custom legend for WBID types:
-wqLeg <- leg('rect', 6, c('#00244c', '#6A5ACD', '#40E0D0', '#006400', '#E69F00', '#696969'),
-             0.5, 20, 20)
+wqLeg <- leg(
+  shape  = 'rect', 
+  n      = 6, 
+  colors = c('#00244c', '#6A5ACD', '#40E0D0', '#006400', '#E69F00', '#696969'),
+  fOp    = 0.5, 
+  h      = 20, 
+  w      =20
+  )
 
 # Add other elements to the map:
-m <- m |> leaflet::addPolygons(
-  data        = wqShp[wqShp$WBID == '1486A', ],
-  layerId     = 'shape',
-  fillOpacity = 0.17,
-  stroke      = TRUE,
-  color       = 'green',
-  fill        = TRUE,
-  fillColor   = ~color,
-  label       = ~ID,
-  ) |> 
+m <- m |> 
+  leaflet::addPolygons(
+    data        = wqShp[wqShp$WBID == '1486A', ],
+    layerId     = 'shape',
+    fillOpacity = 0.17,
+    stroke      = TRUE,
+    color       = 'green',
+    fill        = TRUE,
+    fillColor   = ~color,
+    label       = ~ID,
+    ) |> 
   leaflet::addLayersControl(
     position = "topleft",  
     baseGroups = c("CartoDB.Positron", "Esri.WorldImagery", "OpenTopoMap"),
@@ -773,62 +786,72 @@ observe({
 rcd <- reactive({
 
   # Select the data used for the report card:
-  rd <- data.frame(
-    wqIn |>
-      dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()]) |>
-      dplyr::select(Date, WBID, Type, chl_a = `Chl-a`, chla_q = `Chla_q`,
-                    DOsat = `DO%`, DOsat_q = `DO%_q`, TKN, TKN_q, NOX, NOX_q, 
-                    TP, TP_q, E_coli, Eco_q, Enterococci, EC_q)) |>
+  rd <- wqIn |>
+    dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()]) |>
+    dplyr::filter(Level == 'Surface') |>
+    dplyr::select(Date, WBID, Type, `Chl-a`, `DO%`, TKN, NOX, TP, E_coli, Enterococci) |>
+    dplyr::mutate(TN = TKN + NOX) |>
     dplyr::group_by(Date, WBID, Type) |>
-    dplyr::summarise_if(is.numeric, mean, na.rm = TRUE)
-
-    # Remove data if it has certain qualifiers associated with it:
-    for(i in seq(3, ncol(rd) - 1, 2)){
-      rd[, i][which(grepl('J|Y|\\?|\\*\\*', rd[, i + 1]) == TRUE)] <- NA
-    }
-
+    dplyr::summarise_if(is.numeric, meanNA)
+  
   # Calculate the 10% exceedance criteria for DO:
-  do <- data.frame(
-    rd |>
-      dplyr::group_by(Year = lubridate::year(Date), Type) |>
-      dplyr::filter(Year != lubridate::year(Sys.Date())) |>
-      dplyr::summarise(
-        total_samples = dplyr::n(),
-        n_below = dplyr::case_when(
-          Type == 'MARINE' ~ length(which(DOsat < 42)),
-          TRUE ~ length(which(DOsat < 38))
-        )) |>
-      dplyr::distinct() |>
-      dplyr::mutate(do_grade = ifelse((n_below/total_samples) > 0.1, 'Fail', 'Pass'))
-    )
-
-  # Calculate the geometric mean exceedence for chl-a, TP, TN, E.coli, and Enterococci
-  # and compare to WBID specific FDEP criteria for pass/fail:
-  nubact <- data.frame(
-    rd |>
-      dplyr::mutate(TN = TKN + NOX) |>
-      dplyr::select(Date, WBID, Type, chl_a, TP, TN, E_coli, Enterococci) |>
-      dplyr::group_by(Year = lubridate::year(Date), WBID, Type) |>
-      dplyr::summarise(dplyr::across(c(chl_a, TP, TN, E_coli, Enterococci), \(.)
-                                     psych::geometric.mean(., na.rm = TRUE))) |>
-      # dplyr::summarise(if(wqShp$WBID[wqShp$ID == site()] %in% c('1558I','1558H','1558H2','1558G','1558F',
-      #                                      1661,'1528A','1558N','1694A','1694B','1618C'))
-      #   dplyr::across(chl_a),mean,na.rm=TRUE) |>
-      dplyr::mutate(
-        chl_grade    = ifelse(chl_a >= wCrit$chla_crit[wCrit$WBID == WBID], 'Fail', 'Pass'),
-        tp_grade     = ifelse(TP >= wCrit$TP_crit[wCrit$WBID == WBID],'Fail','Pass'),
-        tn_grade     = ifelse(TN >= wCrit$TN_crit[wCrit$WBID == WBID],'Fail','Pass'),
-        ecoli_grade  = ifelse(E_coli >= wCrit$Ecoli_crit[wCrit$WBID == WBID],'Fail','Pass'),
-        entero_grade = ifelse(Enterococci >= wCrit$Entero_crit[wCrit$WBID == WBID],'Fail','Pass')) |>
-      dplyr::filter(Year != lubridate::year(Sys.Date()))
-    )
-
-  # Combine the DO and nutrient exceedence data:
-  rc <- dplyr::bind_cols(do, nubact) |>
-    dplyr::select(Year = 'Year...1', `Chlorophyll-a` = chl_grade, 
-                  `Dissolved Oxygen` = do_grade, `Total Phosphorus` = tp_grade,
-                  `Total Nitrogen` = tn_grade, `E. coli` = ecoli_grade,
-                  Enterococci = entero_grade) |>
+  do <- rd |>
+    dplyr::group_by(Year = lubridate::year(Date), Type) |>
+    dplyr::filter(Year != lubridate::year(Sys.Date())) |>
+    dplyr::reframe(
+      total_samples = dplyr::n(),
+      n_below = dplyr::case_when(
+        Type == 'MARINE' ~ length(which(`DO%` < 42)),
+        TRUE ~ length(which(`DO%` < 38))
+      )
+      ) |>
+    dplyr::distinct() |>
+    dplyr::mutate(do_grade = ifelse((n_below/total_samples) >= 0.1, 'Fail', 'Pass'))
+  
+  # The annual exceedance limits have differing calculations based on specific
+  # WBIDs according to FDEP criteria. Some of the coastal sites using geometric
+  # mean for chl-a, TP, and TN, while other coastal sites use the geometric mean
+  # for nutrient and arithmetic mean for chl-a.
+  if (! unique(rd$WBID) %in% c('1558I','1558H','1558H2','1558G','1558F', 1661,'1528A',
+                   '1558N','1694A','1694B','1618C','1558B','1558C')) {
+  repo <- rd |>
+    dplyr::select(-`DO%`) |>
+    dplyr::group_by(WBID, Year = lubridate::year(Date)) |>
+    dplyr::summarise_if(is.numeric, psych::geometric.mean, na.rm = TRUE)
+  } else {
+    repo <- rd |>
+      dplyr::select(-`DO%`) |>
+      dplyr::group_by(WBID, Year = lubridate::year(Date)) |>
+      dplyr::summarise(`Chl-a`     = meanNA(`Chl-a`),
+                       TN          = psych::geometric.mean(TN),
+                       TP          = psych::geometric.mean(TP),
+                       `E_coli`    = psych::geometric.mean(E_coli),
+                       Enterococci = psych::geometric.mean(Enterococci)) 
+  }
+  
+  # Filter the water quality criteria for the selected site:
+  wbC <- wCrit |>
+    dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()])
+    
+  # Convert the data to pass/fail score based on the WBID criteria and adjust
+  # the data based on the slider input:
+  rc <- repo |>
+    dplyr::ungroup() |>
+    dplyr::mutate(
+      chl_grade    = ifelse(`Chl-a` >= wbC$chla_crit, 'Fail', 'Pass'),
+      tp_grade     = ifelse(TP >= wbC$TP_crit,'Fail','Pass'),
+      tn_grade     = ifelse(TN >= wbC$TN_crit,'Fail','Pass'),
+      ecoli_grade  = ifelse(E_coli >= wbC$Ecoli_crit,'Fail','Pass'),
+      entero_grade = ifelse(Enterococci >= wbC$Entero_crit,'Fail','Pass')) |>
+    dplyr::left_join(do |> dplyr::select(Year, do_grade), by = c('Year')) |>
+    dplyr::select(
+      Year, 
+      `Chlorophyll-a` = chl_grade,
+      `Dissolved Oxygen` = do_grade,
+      `Total Phosphorus` = tp_grade,
+      `Total Nitrogen` = tn_grade,
+      `E. coli` = ecoli_grade,
+      Enterococci = entero_grade) |>
     dplyr::select_if(~!all(is.na(.))) |>
     dplyr::mutate(across(everything(), ~replace(., is.na(.), ''))) |>
     dplyr::filter(Year >= input$year[1] & Year <= input$year[2])
@@ -877,9 +900,15 @@ rcd <- reactive({
       )
   })
 
+
  # display table
  fillCol(flex = 1,
          plotly::renderPlotly(rcd()))
+ 
+ 
+
+ 
+ 
  
 ```
 
@@ -1128,9 +1157,8 @@ observeEvent(input$active_tab, {
     })
   } else if(input$active_tab == 'Report Card'){
     output$gaugePlots <- renderUI({
-      fillCol(flex = c(1, rep(1,5)),
-        HTML('<em>This tab is under development. The Pass/Fail status for each parameter in a watershed is provisional and needs further verification.</em>'),
-          paste('\nThis water quality report card for the',stringr::str_to_title(site()),
+      fillCol(flex = c(1, rep(1,4)),
+      paste('\nThis water quality report card for the',stringr::str_to_title(site()),
                 'watershed is based on criteria set by FDEP with a Pass/Fail status for each parameter determined by annual threshold exceedence of 10% of samples (dissolved oxygen) or geometric mean (all other parameters).'),
         paste0(''),
         paste0(''),
@@ -1371,8 +1399,41 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!-- }) -->
 
 
-<!-- fillCol(flex = 1, -->
-<!--         plotly::renderPlotly(bioP())) -->
+
+<!-- fig <- plotly::plot_ly( -->
+<!--   type = 'table', -->
+<!--   mode = 'text', -->
+<!--   x = c(1, 2), -->
+<!--   y = c(1, 1), -->
+<!--   text = c("July 13, 2009", "45 (Healthy)"), -->
+<!--   textfont = list(size = 18), -->
+<!--   hoverinfo = 'none' -->
+<!--   ) |> -->
+<!--   plotly::layout( -->
+<!--     annotations = list( -->
+<!--       list(x = 0, y = 0.7,  -->
+<!--            text = "<b>Datasource/Agency</b><br>FDEP Watershed Monitoring Section", -->
+<!--            showarrow = FALSE, xanchor = "left"), -->
+<!--       list(x = 0, y = 0.6, text = "<b>WIN/STORET Station</b><br>36312",  -->
+<!--            showarrow = FALSE, xanchor = "left"), -->
+<!--       list(x = 0, y = 0.5, text = "<b>Station</b><br>Z4SL3003", -->
+<!--            showarrow = FALSE, xanchor = "left"), -->
+<!--       list(x = 0, y = 0.4, text = "<b>Survey</b><br>AMBIENT STATUS MONTR",  -->
+<!--            showarrow = FALSE, xanchor = "left") -->
+<!--     ), -->
+<!--     showlegend = FALSE -->
+<!--   ) -->
+
+
+
+
+
+
+
+
+<!-- fillCol(flex = c(1,1), -->
+<!--         plotly::renderPlotly(bioP()), -->
+<!--         plotly::renderPlotly(fig)) -->
 
 <!-- ``` -->
 
@@ -1531,8 +1592,13 @@ observeEvent(input$next_date1, {
 
 
 # Red tide legend:
-rtLeg <- leg('circle', 5, c('#878686', 'white', 'yellow', 'orange', 'red'), 0.8,
-             10, 15)
+rtLeg <- leg(
+  shape = 'circle', 
+  n = 5, 
+  colors = c('#878686', 'white', 'yellow', 'orange', 'red'), 
+  fOp = 0.8,
+  h = 10, 
+  w = 15)
 
 
 rtm <- reactive({
@@ -1694,7 +1760,13 @@ observeEvent(input$next_date, {
 })
 
 # Bacteria legend:
-bLeg <- leg('circle', 3, c('green','yellow','red'), 0.8, 15, 20)
+bLeg <- leg(
+  shape = 'circle', 
+  n = 3, 
+  colors = c('green','yellow','red'), 
+  fOp = 0.8, 
+  h = 15, 
+  w = 20)
 
 # Make bacteria map
 bm <- reactive({

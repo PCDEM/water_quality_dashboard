@@ -788,8 +788,8 @@ table_row <- function(label, value, bg_color, color = "black") {
 }
 
 # Generate the entire table popup with conditional rows
-create_popup <- function(ID, REGION, HUC, WBID, Area, CLASS, Type, Status, DO_crit,
-                         chla_crit, TN_crit, TP_crit, Ecoli_crit, Entero_crit) {
+create_popup <- function(ID, REGION, Basin, HUC, WBID, Area, CLASS, Type, Status, DO_crit,
+                         chla_crit, TN_crit, TP_crit, Ecoli_crit, Entero_crit, wq = TRUE) {
   
   # Ensure Type is a single character value
   Type <- as.character(Type[1])  
@@ -806,6 +806,7 @@ create_popup <- function(ID, REGION, HUC, WBID, Area, CLASS, Type, Status, DO_cr
     
     table_row("Sampling Status", Status, c1, 
               ifelse(Status == "Active", "green", ifelse(Status == "Inactive", "red", "black"))),
+    table_row("Pinellas Basin", Basin, c2),
     table_row("Region", REGION, c1),
     table_row("HUC", HUC, c2),
     table_row("WBID", WBID, c1),
@@ -813,23 +814,26 @@ create_popup <- function(ID, REGION, HUC, WBID, Area, CLASS, Type, Status, DO_cr
     table_row("Class", CLASS, c1)
   )
   
-  # Only add FDEP Limits if Type is NOT "NOT SAMPLED"
-  if (!identical(Type, "NOT SAMPLED")) {
-    popup_content <- paste0(popup_content,
-                            table_row("Water Type", stringr::str_to_title(Type), c2),
-                            table_row("FDEP DO Limit", paste0(DO_crit, ifelse(is.na(DO_crit), "", "% sat")), c1),
-                            table_row("FDEP Chl-a Limit", paste(chla_crit, ifelse(is.na(chla_crit), "", "µg/L")), c2),
-                            table_row("FDEP TN Limit", paste(TN_crit, ifelse(is.na(TN_crit), "", "mg/L")), c1),
-                            table_row("FDEP TP Limit", paste(TP_crit, ifelse(is.na(TP_crit), "", "mg/L")), c2)
-    )
-    
-    # Conditionally add bacteria limits
-    if (identical(Type, "FRESHWATER")) {
-      popup_content <- paste0(popup_content, 
-                              table_row("FDEP E. coli Limit", paste(Ecoli_crit, ifelse(is.na(Ecoli_crit), "", "MPN/100mL")), c1))
-    } else if (identical(Type, "TIDAL")) {
-      popup_content <- paste0(popup_content, 
-                              table_row("FDEP Enterococci Limit", paste(Entero_crit, ifelse(is.na(Entero_crit), "", "MPN/100mL")), c2))
+  # Only add FDEP limits if wq argument is TRUE:
+  if (wq == TRUE){
+    # Only add FDEP Limits if Type is NOT "NOT SAMPLED"
+    if (!identical(Type, "NOT SAMPLED")) {
+      popup_content <- paste0(popup_content,
+                              table_row("Water Type", stringr::str_to_title(Type), c2),
+                              table_row("FDEP DO Limit", paste0(DO_crit, ifelse(is.na(DO_crit), "", "% sat")), c1),
+                              table_row("FDEP Chl-a Limit", paste(chla_crit, ifelse(is.na(chla_crit), "", "µg/L")), c2),
+                              table_row("FDEP TN Limit", paste(TN_crit, ifelse(is.na(TN_crit), "", "mg/L")), c1),
+                              table_row("FDEP TP Limit", paste(TP_crit, ifelse(is.na(TP_crit), "", "mg/L")), c2)
+      )
+      
+      # Conditionally add bacteria limits
+      if (Type == "FRESHWATER") {
+        popup_content <- paste0(popup_content, 
+                                table_row("FDEP E. coli Limit", paste(Ecoli_crit, ifelse(is.na(Ecoli_crit), "", "MPN/100mL")), c1))
+      } else if (Type == "TIDAL") {
+        popup_content <- paste0(popup_content, 
+                                table_row("FDEP Enterococci Limit", paste(Entero_crit, ifelse(is.na(Entero_crit), "", "MPN/100mL")), c2))
+      }
     }
   }
   
@@ -838,6 +842,7 @@ create_popup <- function(ID, REGION, HUC, WBID, Area, CLASS, Type, Status, DO_cr
   
   return(popup_content)
 }
+
 
 
 # Function to generate plot for SCI data:
@@ -917,7 +922,7 @@ bioPlt <- function(x, bio){
         linecolor = 'black',
         mirror = TRUE),
       
-      shapes = shapes  # Apply the conditional shapes list
+      shapes = shapes 
     )
 }
 
