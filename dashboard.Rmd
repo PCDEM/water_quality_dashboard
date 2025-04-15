@@ -904,11 +904,7 @@ rcd <- reactive({
  # display table
  fillCol(flex = 1,
          plotly::renderPlotly(rcd()))
- 
- 
 
- 
- 
  
 ```
 
@@ -1246,8 +1242,8 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--     fill        = TRUE, -->
 <!--     fillColor   = ~color, -->
 <!--     label       = ~ID, -->
-<!--     popup       = ~create_popup(ID, REGION, HUC, WBID, Area, CLASS, Type, Status, -->
-<!--                             wq = FALSE), -->
+<!--     # popup       = ~create_popup(ID, REGION, HUC, WBID, Area, CLASS, Type, Status, -->
+<!--     #                         wq = FALSE), -->
 <!--     highlightOptions = leaflet::highlightOptions( -->
 <!--       color = 'white', -->
 <!--       weight = 4, -->
@@ -1357,14 +1353,17 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 
 <!-- ```{r SCI data} -->
 
-<!-- sci <- readxl::read_excel('Data/Pinellas_SCI.xlsx') |> -->
-<!--   dplyr::mutate(Date = as.numeric(Date), -->
-<!--                 Date = as.Date(Date, origin = '1899-12-30'), -->
+<!-- sci <- readxl::read_excel('Data/Pinellas_SCI.xlsx', sheet = 'SCI Scores') |> -->
+<!--   dplyr::mutate(Date = as.Date(as.numeric(Date), origin = '1899-12-30'), -->
 <!--                 Bio = 'SCI Score') |> -->
 <!--   dplyr::rename(Score = `SCI Score`) |> -->
 <!--   tidyr::drop_na(Date, Score) |> -->
 <!--   dplyr::group_by(Segment, WBID, Date, Bio) |> -->
 <!--   dplyr::summarise(Score = mean(Score, na.rm = TRUE)) -->
+
+<!-- sciTaxa <- readxl::read_excel('Data/Pinellas_SCI.xlsx', sheet = 'Taxa Abundance') |> -->
+<!--   dplyr::mutate(Date = as.Date(Date)) -->
+
 
 <!-- lvi <- readxl::read_excel('Data/Pinellas_LVI.xlsx') |> -->
 <!--   dplyr::mutate(Date = as.Date(Date), -->
@@ -1400,40 +1399,34 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 
 
 
-<!-- fig <- plotly::plot_ly( -->
-<!--   type = 'table', -->
-<!--   mode = 'text', -->
-<!--   x = c(1, 2), -->
-<!--   y = c(1, 1), -->
-<!--   text = c("July 13, 2009", "45 (Healthy)"), -->
-<!--   textfont = list(size = 18), -->
-<!--   hoverinfo = 'none' -->
-<!--   ) |> -->
-<!--   plotly::layout( -->
-<!--     annotations = list( -->
-<!--       list(x = 0, y = 0.7,  -->
-<!--            text = "<b>Datasource/Agency</b><br>FDEP Watershed Monitoring Section", -->
-<!--            showarrow = FALSE, xanchor = "left"), -->
-<!--       list(x = 0, y = 0.6, text = "<b>WIN/STORET Station</b><br>36312",  -->
-<!--            showarrow = FALSE, xanchor = "left"), -->
-<!--       list(x = 0, y = 0.5, text = "<b>Station</b><br>Z4SL3003", -->
-<!--            showarrow = FALSE, xanchor = "left"), -->
-<!--       list(x = 0, y = 0.4, text = "<b>Survey</b><br>AMBIENT STATUS MONTR",  -->
-<!--            showarrow = FALSE, xanchor = "left") -->
-<!--     ), -->
-<!--     showlegend = FALSE -->
-<!--   ) -->
-
-
-
-
-
+<!-- # fig <- plotly::plot_ly( -->
+<!-- #   type = 'table', -->
+<!-- #   mode = 'text', -->
+<!-- #   x = c(1, 2), -->
+<!-- #   y = c(1, 1), -->
+<!-- #   text = c("July 13, 2009", "45 (Healthy)"), -->
+<!-- #   textfont = list(size = 18), -->
+<!-- #   hoverinfo = 'none' -->
+<!-- #   ) |> -->
+<!-- #   plotly::layout( -->
+<!-- #     annotations = list( -->
+<!-- #       list(x = 0, y = 0.7, -->
+<!-- #            text = "<b>Datasource/Agency</b><br>FDEP Watershed Monitoring Section", -->
+<!-- #            showarrow = FALSE, xanchor = "left"), -->
+<!-- #       list(x = 0, y = 0.6, text = "<b>WIN/STORET Station</b><br>36312", -->
+<!-- #            showarrow = FALSE, xanchor = "left"), -->
+<!-- #       list(x = 0, y = 0.5, text = "<b>Station</b><br>Z4SL3003", -->
+<!-- #            showarrow = FALSE, xanchor = "left"), -->
+<!-- #       list(x = 0, y = 0.4, text = "<b>Survey</b><br>AMBIENT STATUS MONTR", -->
+<!-- #            showarrow = FALSE, xanchor = "left") -->
+<!-- #     ), -->
+<!-- #     showlegend = FALSE -->
+<!-- #   ) -->
 
 
 
 <!-- fillCol(flex = c(1,1), -->
-<!--         plotly::renderPlotly(bioP()), -->
-<!--         plotly::renderPlotly(fig)) -->
+<!--         plotly::renderPlotly(bioP())) -->
 
 <!-- ``` -->
 
