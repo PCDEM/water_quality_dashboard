@@ -224,16 +224,16 @@ m <- m |>
 # Get data for each WBID based on user click:
 getData <- reactive({ 
   if (is.null(input$mapplo_shape_click)){
-    strat <- '1486A'
+    wbid <- '1486A'
     } else {
-      strat <- getStrata(
+      wbid <- getWBID(
         spDat = wqShp,
         lat   = input$mapplo_shape_click$lat, 
         lng   = input$mapplo_shape_click$lng
         )
     }
   data <- data.frame(
-    dplyr::filter(wqM, WBID == strat) |>
+    dplyr::filter(wqM, WBID == wbid) |>
     dplyr::select(
       Date, DO, chl_a, TN, TP, TSS, Turbidity, Secchi, Temp, Salinity, Ecoli, Entero
       )
@@ -245,7 +245,7 @@ mapplo <- leaflet::leafletProxy('mapplo')
 
 # Change the highlighted WBID based on user click:
 observeEvent(input$mapplo_shape_click, {
-  sName <- getStrata(
+  sName <- getWBID(
     spDat = wqShp,                   
     lat   = input$mapplo_shape_click$lat,
     lng   = input$mapplo_shape_click$lng
@@ -273,7 +273,7 @@ site <- reactive({
   if(is.null(input$mapplo_shape_click)){
     sName <- '1486A'
   } else {
-    sName <- getStrata(
+    sName <- getWBID(
       spDat = wqShp,
       lat = input$mapplo_shape_click$lat,
       lng = input$mapplo_shape_click$lng
@@ -1176,7 +1176,7 @@ Some of FDEP's water quality criteria include dissolved oxygen, chlorophyll-a, a
 
 An increase in nutrient levels in the water can can promote the growth of algal blooms and other nuisance aquatic vegetation. As the blooms begin to die off, their decomposition leads to a decrease in dissolved oxygen in the water, which can be harmful to aquatic life. 
 
-The Pass/Fail designation for each parameter is determined by calculating the annual geometric mean and then comparing it to the FDEP standard. If the value exceeds the FDEP standard, the site will get a 'Fail' for that parameter. If the value does not exceed the standard, the site will get a 'Pass'. Visit the FDEP Water Quality Standards [webpage](https://floridadep.gov/DEAR/Water-Quality-Standards){target="_blank"} for more information about specific water quality criteria throughout the state of Florida.
+The Pass/Fail designation for each parameter is determined by calculating the annual geometric mean and then compar  ing it to the FDEP standard. If the value exceeds the FDEP standard, the site will get a 'Fail' for that parameter. If the value does not exceed the standard, the site will get a 'Pass'. Visit the FDEP Water Quality Standards [webpage](https://floridadep.gov/DEAR/Water-Quality-Standards){target="_blank"} for more information about specific water quality criteria throughout the state of Florida.
 
 
 <!-- Bioassessments -->
@@ -1309,7 +1309,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 
 <!-- # Change the highlighted WBID based on user click: -->
 <!-- observeEvent(input$biomap_shape_click, { -->
-<!--   sName <- getStrata( -->
+<!--   sName <- getWBID( -->
 <!--     spDat = bios, -->
 <!--     lat   = input$biomap_shape_click$lat, -->
 <!--     lng   = input$biomap_shape_click$lng -->
@@ -1353,21 +1353,43 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 
 <!-- ```{r SCI data} -->
 
+<!-- # Read in the SCI score data: -->
 <!-- sci <- readxl::read_excel('Data/Pinellas_SCI.xlsx', sheet = 'SCI Scores') |> -->
-<!--   dplyr::mutate(Date = as.Date(as.numeric(Date), origin = '1899-12-30'), -->
-<!--                 Bio = 'SCI Score') |> -->
+<!--   dplyr::mutate(Date = as.Date(Date), -->
+<!--                 Bio = 'SCI') |> -->
 <!--   dplyr::rename(Score = `SCI Score`) |> -->
 <!--   tidyr::drop_na(Date, Score) |> -->
 <!--   dplyr::group_by(Segment, WBID, Date, Bio) |> -->
-<!--   dplyr::summarise(Score = mean(Score, na.rm = TRUE)) -->
+<!--   dplyr::summarise(Score = mean(Score, na.rm = TRUE)) |> -->
+<!--   dplyr::ungroup() -->
 
-<!-- sciTaxa <- readxl::read_excel('Data/Pinellas_SCI.xlsx', sheet = 'Taxa Abundance') |> -->
-<!--   dplyr::mutate(Date = as.Date(Date)) -->
+<!-- # Read in the SCI taxa abundance data: -->
+<!-- sciTaxa <- readxl::read_excel('Data/Pinellas_SCI.xlsx', sheet = 'Taxa') |> -->
+<!--   dplyr::mutate(Date = as.Date(Date)) |> -->
+<!--   dplyr::left_join( -->
+<!--     sci |> dplyr::select(Segment, WBID) |> dplyr::distinct(), -->
+<!--     by = c('Site' = 'Segment') -->
+<!--     ) -->
+
+
+<!-- sciMet <- readxl::read_excel('Data/Pinellas_SCI.xlsx', sheet = 'Metrics') |> -->
+<!--   dplyr::mutate(Date = as.Date(Date)) |> -->
+<!--   dplyr::left_join( -->
+<!--     sci |> dplyr::select(Segment, WBID) |> dplyr::distinct(), -->
+<!--     by = c('Site' = 'Segment') -->
+<!--     ) |> -->
+<!--   dplyr::group_by(Site, Date, WBID, `SCI Metric`) |> -->
+<!--   dplyr::summarise(`Raw Totals` = meanNA(`Raw Totals`), -->
+<!--             `SCI Scores` = meanNA(`SCI scores`)) |> -->
+<!--   dplyr::ungroup() |> -->
+<!--   dplyr::arrange(desc(`SCI Metric`)) |> -->
+<!--   dplyr::mutate(`Raw Totals` = round(`Raw Totals`,2), -->
+<!--                 `SCI Scores` = round(`SCI Scores`, 2)) -->
 
 
 <!-- lvi <- readxl::read_excel('Data/Pinellas_LVI.xlsx') |> -->
 <!--   dplyr::mutate(Date = as.Date(Date), -->
-<!--                 Bio = 'LVI Score') |> -->
+<!--                 Bio = 'LVI') |> -->
 <!--   dplyr::rename(Score = `LVI Score`) |> -->
 <!--   tidyr::drop_na(Date, Score) |> -->
 <!--   dplyr::group_by(Segment, WBID, Date, Bio) |> -->
@@ -1380,53 +1402,137 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!-- # Get data for each WBID based on user click: -->
 <!-- getBio <- reactive({ -->
 <!--   if (is.null(input$biomap_shape_click)){ -->
-<!--     strat <- '1474' -->
+<!--     wbid <- '1474' -->
 <!--     } else { -->
-<!--       strat <- getStrata( -->
+<!--       wbid <- getWBID( -->
 <!--         spDat = bios, -->
 <!--         lat   = input$biomap_shape_click$lat, -->
 <!--         lng   = input$biomap_shape_click$lng -->
 <!--         ) -->
 <!--     } -->
-<!--   data <- dplyr::filter(bioData, WBID == strat) -->
-<!--   return(data) -->
+
+<!--   list( -->
+<!--     bio = dplyr::filter(bioData, WBID == wbid), -->
+<!--     taxa = dplyr::filter(sciTaxa, WBID == wbid), -->
+<!--     met  = dplyr::filter(sciMet, WBID == wbid) -->
+<!--   ) -->
+
 <!--   }) -->
 
 
+
 <!-- bioP <- reactive({ -->
-<!--   return(bioPlt(getBio(), bio = ifelse(getBio()$Bio[1] =='SCI Score', 'SCI', 'LVI'))) -->
+<!--   return(bioPlt(getBio()$bio, bio = ifelse(getBio()$bio$Bio[1] =='SCI', 'SCI', 'LVI'))) -->
+<!-- }) -->
+
+<!-- taxaT <- reactive({ -->
+<!--   return(taxaTbl(getBio()$taxa, type = 'counts')) -->
+<!-- }) -->
+
+<!-- metT <- reactive({ -->
+<!--   return(taxaTbl(getBio()$met, type = 'metrics')) -->
+<!-- }) -->
+
+
+<!-- output$currentScore <- renderUI({ -->
+
+<!--   score <- tail(getBio()$bio$Score, 1) -->
+<!--   scoreInfo <- paste0('Current ', -->
+<!--                       dplyr::case_when( -->
+<!--                         getBio()$bio$Bio[1] == 'SCI' ~ 'Stream Condition Index (SCI)', -->
+<!--                         getBio()$bio$Bio[1] == 'LVI' ~ 'Lake Vegetation Index (LVI)' -->
+<!--                       ), -->
+<!--                       ' Score (',format(tail(getBio()$bio$Date, 1), "%m/%d/%Y"), ')') -->
+
+<!--   status <- dplyr::case_when( -->
+<!--     getBio()$bio$Bio[1] == 'SCI' & score <= 40 ~ "IMPAIRED", -->
+<!--     getBio()$bio$Bio[1] == 'SCI' & score > 40 & score <= 65 ~ "MARGINAL", -->
+<!--     getBio()$bio$Bio[1] == 'SCI' & score > 65 ~ "HEALTHY", -->
+<!--     getBio()$bio$Bio[1] == 'LVI' & score <= 42 ~ "IMPAIRED", -->
+<!--     getBio()$bio$Bio[1] == 'LVI' & score > 42 ~ "HEALTHY" -->
+<!--   ) -->
+
+
+<!--   htmltools::div( -->
+<!--     style = "text-align: center;  -->
+<!--              padding: 10px 10px;  -->
+<!--              margin: 0px 0px;  -->
+<!--              border: 2px solid #ccc;  -->
+<!--              border-radius: 10px;  -->
+<!--              background-color: #f5faff;  -->
+<!--              font-family: sans-serif; -->
+<!--              width: 100%;", -->
+
+<!--     htmltools::tags$h3(scoreInfo, style = "margin: 0; padding-bottom: 5px; color: #555;"), -->
+<!--     htmltools::tags$h1(score, style = "margin: 0; font-size: 40px; color: #2c3e50;"), -->
+<!--     htmltools::tags$h2(status, style = paste0( -->
+<!--       "margin: 5px 0 0 0; font-weight: bold; color: ", -->
+<!--       dplyr::case_when( -->
+<!--         status == "IMPAIRED" ~ "#e74c3c", -->
+<!--         status == "MARGINAL" ~ "#f39c12", -->
+<!--         status == "HEALTHY" ~ "#2ecc71" -->
+<!--       ) -->
+<!--     )) -->
+<!--   ) -->
+<!-- }) -->
+
+<!-- output$meanScore <- renderUI({ -->
+
+<!--   score <- round(meanNA(getBio()$bio$Score), 0) -->
+<!--   scoreInfo <- paste0('Average ', -->
+<!--                       dplyr::case_when( -->
+<!--                         getBio()$bio$Bio[1] == 'SCI' ~ 'Stream Condition Index (SCI)', -->
+<!--                         getBio()$bio$Bio[1] == 'LVI' ~ 'Lake Vegetation Index (LVI)' -->
+<!--                       ), ' Score') -->
+
+<!--   status <- dplyr::case_when( -->
+<!--     getBio()$bio$Bio[1] == 'SCI' & score <= 40 ~ "IMPAIRED", -->
+<!--     getBio()$bio$Bio[1] == 'SCI' & score > 40 & score <= 65 ~ "MARGINAL", -->
+<!--     getBio()$bio$Bio[1] == 'SCI' & score > 65 ~ "HEALTHY", -->
+<!--     getBio()$bio$Bio[1] == 'LVI' & score <= 42 ~ "IMPAIRED", -->
+<!--     getBio()$bio$Bio[1] == 'LVI' & score > 42 ~ "HEALTHY" -->
+<!--   ) -->
+
+
+<!--   htmltools::div( -->
+<!--     style = "text-align: center;  -->
+<!--              padding: 10px 10px;  -->
+<!--              margin: 0px 0px;  -->
+<!--              border: 2px solid #ccc;  -->
+<!--              border-radius: 10px;  -->
+<!--              background-color: #f5faff;  -->
+<!--              font-family: sans-serif; -->
+<!--              width: 100%;", -->
+
+<!--     htmltools::tags$h3(scoreInfo, style = "margin: 0; padding-bottom: 5px; color: #555;"), -->
+<!--     htmltools::tags$h1(score, style = "margin: 0; font-size: 40px; color: #2c3e50;"), -->
+<!--     htmltools::tags$h2(status, style = paste0( -->
+<!--       "margin: 5px 0 0 0; font-weight: bold; color: ", -->
+<!--       dplyr::case_when( -->
+<!--         status == "IMPAIRED" ~ "#e74c3c", -->
+<!--         status == "MARGINAL" ~ "#f39c12", -->
+<!--         status == "HEALTHY" ~ "#2ecc71" -->
+<!--       ) -->
+<!--     )) -->
+<!--   ) -->
 <!-- }) -->
 
 
 
-<!-- # fig <- plotly::plot_ly( -->
-<!-- #   type = 'table', -->
-<!-- #   mode = 'text', -->
-<!-- #   x = c(1, 2), -->
-<!-- #   y = c(1, 1), -->
-<!-- #   text = c("July 13, 2009", "45 (Healthy)"), -->
-<!-- #   textfont = list(size = 18), -->
-<!-- #   hoverinfo = 'none' -->
-<!-- #   ) |> -->
-<!-- #   plotly::layout( -->
-<!-- #     annotations = list( -->
-<!-- #       list(x = 0, y = 0.7, -->
-<!-- #            text = "<b>Datasource/Agency</b><br>FDEP Watershed Monitoring Section", -->
-<!-- #            showarrow = FALSE, xanchor = "left"), -->
-<!-- #       list(x = 0, y = 0.6, text = "<b>WIN/STORET Station</b><br>36312", -->
-<!-- #            showarrow = FALSE, xanchor = "left"), -->
-<!-- #       list(x = 0, y = 0.5, text = "<b>Station</b><br>Z4SL3003", -->
-<!-- #            showarrow = FALSE, xanchor = "left"), -->
-<!-- #       list(x = 0, y = 0.4, text = "<b>Survey</b><br>AMBIENT STATUS MONTR", -->
-<!-- #            showarrow = FALSE, xanchor = "left") -->
-<!-- #     ), -->
-<!-- #     showlegend = FALSE -->
-<!-- #   ) -->
 
-
-
-<!-- fillCol(flex = c(1,1), -->
-<!--         plotly::renderPlotly(bioP())) -->
+<!-- fillCol(flex = c(1,1,0.5), -->
+<!--         fillRow(flex = c(1,1), -->
+<!--                 fillCol(flex = c(1,1), -->
+<!--                         uiOutput('currentScore'), -->
+<!--                         uiOutput('meanScore') -->
+<!--                 ), -->
+<!--                 plotly::renderPlotly(bioP()), -->
+<!--                 ), -->
+<!--         fillRow(flex = c(1,1,1), -->
+<!--                 plotly::renderPlotly(metT()), -->
+<!--                 plotly::renderPlotly(taxaT()) -->
+<!--         ) -->
+<!-- ) -->
 
 <!-- ``` -->
 
