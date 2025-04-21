@@ -647,7 +647,7 @@ tbd <- function(input,value){
 }
 
 # Check to see which polygon what clicked:
-getStrata <- function(spDat, lat, lng){
+getWBID <- function(spDat, lat, lng){
   spt <- as(spDat, "Spatial")
   pnt <- sp::SpatialPoints(matrix(c(lng, lat), ncol = 2), 
                            proj4string = sp::CRS(sp::proj4string(spt)))
@@ -924,5 +924,72 @@ bioPlt <- function(x, bio){
       
       shapes = shapes 
     )
+}
+
+# Function to create table ob taxa abundance data:
+taxaTbl <- function(x, type){
+  
+  
+  if (type == 'counts'){
+    
+    # Combine the data based on rep number and get total counts:
+    dat <- dplyr::left_join(
+      x |> dplyr::filter(Rep == 1),
+      x |> dplyr::filter(Rep == 2) |> dplyr::select(Taxa, Abundance), 
+      by ='Taxa'
+    ) |>
+      dplyr::select(-c(Site, Rep, Date)) |>
+      dplyr::rename(`Alliquat 1` = Abundance.x,
+                    `Alliquat 2` = Abundance.y) |>
+      dplyr::rowwise() |>
+      dplyr::mutate(`Number of Individuals` = sum(c(`Alliquat 1`, `Alliquat 2`), na.rm = TRUE)) |>
+      dplyr::relocate(`Number of Individuals`, .before = `Alliquat 1`) |>
+      dplyr::arrange(Taxa) |>
+      dplyr::mutate(across(everything(), ~replace(., is.na(.), ''))) 
+    
+    # Generate a table of the taxa count:
+    tbl <- plotly::plot_ly(
+      type = 'table',
+      header = list(
+        values = c("Taxa", "Number of Individuals", "Alliquat 1", "Alliquat 2"),
+        align = c('left', rep('center', 3)),
+        line = list(width = 1, color = 'black'),
+        fill = list(color = 'lightblue'),  # Light blue header
+        font = list(size = 14)
+      ),
+      cells = list(
+        values = rbind(dat$Taxa, dat$`Number of Individuals`, dat$`Alliquat 1`, dat$`Alliquat 2`),
+        align = c('left', rep('center',3)),
+        line = list(color = 'black'),
+        fill = list(color = list(rep(c('white', '#f6f8fa'), length.out = nrow(dat)))),  # striped rows
+        font = list(size = 12)
+      )
+    )
+  }
+  
+  if (type == 'metrics'){
+    # Generate a table of the metrics:
+    tbl <- plotly::plot_ly(
+      type = 'table',
+      header = list(
+        values = c("SCI Metric", "Raw Totals", "SCI SCores"),
+        align = c('left', 'center'),
+        line = list(width = 1, color = 'black'),
+        fill = list(color = 'lightblue'),  # Light blue header
+        font = list(size = 14)
+      ),
+      cells = list(
+        values = rbind(x$`SCI Metric`, x$`Raw Totals`, x$`SCI Scores`),
+        align = c('left', 'center'),
+        line = list(color = 'black'),
+        fill = list(color = list(rep(c('white', '#f6f8fa'), length.out = 6))),  # striped rows
+        font = list(size = 12)
+      )
+    )
+  }
+  
+  return(tbl)
+  
+  
 }
 
