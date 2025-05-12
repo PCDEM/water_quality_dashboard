@@ -32,8 +32,11 @@ source('R/funcs.R')
 
 ```{r data handling, include=FALSE}
 
+# Water quality data path:
+wqPath <- 'Data/Pinellas_County_Water_Quality_Data_2003_2025.xlsx'
+
 # Import water quality data:
-wqInit <- readxl::read_excel("Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx",
+wqInit <- readxl::read_excel(wqPath,
                            guess_max = 50000) |>
   dplyr::mutate(Date = as.Date(Date))
 
@@ -1202,7 +1205,16 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--   dplyr::mutate(bio = ifelse(Type == 'LAKE', 'LVI', 'SCI'), -->
 <!--                 color = ifelse(WBID %in% c('1486A','1574A','1603D','1633A','1650', -->
 <!--                                            '1618'), -->
-<!--                                '#40E0D0', '#006400')) -->
+<!--                                '#40E0D0', '#006400'), -->
+<!--                 interactive = TRUE, -->
+<!--                 Status = 'Active') -->
+
+<!-- bioNS <- wqShp |> -->
+<!--   dplyr::filter(! WBID %in% bios$WBID) |> -->
+<!--   dplyr::mutate(Status = 'Not Sampled', -->
+<!--                 color = 'gray60', -->
+<!--                 interactive = FALSE, -->
+<!--                 bio = 'Not Sampled') -->
 
 
 <!-- # Create the base map and set options: -->
@@ -1259,7 +1271,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 
 <!-- # Add other elements to the map: -->
 <!-- f <- f |> leaflet::addPolygons( -->
-<!--   data        = bios[bios$WBID == '1474', ], -->
+<!--   data        = bios[bios$WBID == '1604B1', ], -->
 <!--   layerId     = 'shape', -->
 <!--   fillOpacity = 0.17, -->
 <!--   stroke      = TRUE, -->
@@ -1345,7 +1357,104 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 
 <!-- ### USING THIS TAB -->
 
+<!-- #### Overview -->
+<!-- This tab shows biological data collected throughout Pinellas County streams and -->
+<!-- lakes. This data include stream condition index (SCI) scores and lake vegetation -->
+<!-- index (LVI) scores. The SCI is a measure of the health of the stream and is determined -->
+<!-- by the presence and abundance of certain macroinvertebrate species, aquatic vegetation, -->
+<!-- and habitat conditions. The LVI measures lake heatlh based on the presence and -->
+<!-- dominance of certain aquatic vegetation species. -->
+
+<!-- <br> -->
+
+<!-- #### Navigating the Map -->
+<!-- Use the cursor to hover over the sites on the MAP tab and click to view biological -->
+<!-- data for that site. Refer to the legend on the bottom left of the map which -->
+<!-- denotes the type of data collected at that site (SCI or LVI). -->
+
+<!-- <br> -->
+<!-- ```{r, fig.align = 'center', out.width = '20%', fig.alt='Map legend'} -->
+<!-- knitr::include_graphics('www/bio_legend.png') -->
+<!-- ``` -->
+<!-- <br> -->
+
+<!-- #### Viewing the Data -->
+<!-- To view the data, click the site of interest and the figures and tables to the right -->
+<!-- will display historical data for the site, if available. -->
+
+<!-- The time-series plots are interactive; the cursor can be used to view the date and -->
+<!-- data for each point and highlight different portions of the plot. A -->
+<!-- [control menu](https://help.plot.ly/zoom-pan-hover-controls/){target="_blank"} will also -->
+<!-- appear when moving the cursor inside the plot area. -->
+
+<!-- <br> -->
+<!-- ```{r, fig.align = 'center', out.width = '70%', fig.alt='Plot control menu options'} -->
+<!-- knitr::include_graphics('www/plotcontrols.PNG') -->
+<!-- ``` -->
+<!-- <br> -->
+
+<!-- Use this menu to zoom, pan, and download the plot as a png file. -->
+
+<!-- <br> -->
+
 <!-- ### BACKGROUND -->
+
+<!-- #### Overview -->
+
+<!-- In addition to measuring these water quality parameters, Pinellas County has -->
+<!-- conducted biological monitoring at certain sites twice a year on alternate years -->
+<!-- since 2014. Sites in the Springs Coast Basin (west side of the County) are -->
+<!-- monitored in even years, and those in the Tampa Bay Basin (east side of the County) -->
+<!-- are monitored in odd years. Biological monitoring includes several FDEP methods -->
+<!-- in order to determine the health of streams and lakes by measuring both the flora -->
+<!-- and fauna present in the waterbody. Please refer to the Annual report for more -->
+<!-- detail and data. -->
+
+<!-- #### SCI -->
+
+<!-- The Stream Condition Index (SCI) is a composite macroinvertebrate index for use -->
+<!-- in flowing streams. Organisms are collected in streams and brought back to the -->
+<!-- laboratory for processing. The taxonomy and abundance of these organisms is used -->
+<!-- to calculate biological metrics which are then summed to obtain an overall score -->
+<!-- of biological health. A health macroinvertebrate community is attained if the -->
+<!-- average score is 40 or higher, with neither of the two most recent SCI scores -->
+<!-- less than 35. -->
+
+<!-- #### HA -->
+
+<!-- A Habitat Assessment (HA) is performed concurrently with each SCI collection. -->
+<!-- Eight attributes known to have potential effects on stream biota are rated to -->
+<!-- produce a score between 8 and 160, with a higher score indicating less human -->
+<!-- disturbance. These attributes describe the physical characteristics of the stream -->
+<!-- as well as the surrounding vegetation. -->
+
+<!-- #### RPS -->
+
+<!-- A Rapid Periphyton Survey (RPS) measures the relative abundance of algae growing -->
+<!-- on stream substrates. Observations include the presence or absence of algae and -->
+<!-- average length of algae, if present. If less than 25% of the algae is longer than -->
+<!-- 6 mm, flora is considered balanced. -->
+
+<!-- #### LVS -->
+
+<!-- The Linear Vegetation Survey (LVS) for flowing streams documents the plant -->
+<!-- community in the measured stream reach. The average sensitivity, measured by the -->
+<!-- Coefficient of Conservatism (COC), of the plant community is calculated based on -->
+<!-- species tolerance to environmental changes. If the average sensitivity is -->
+<!-- greater than or equal to 2.5, the plant community is in balance. The percentage of -->
+<!-- invasive exotics is also noted, with a balanced plant community being less than -->
+<!-- 25% of the plants being invasive. -->
+
+<!-- #### LVI -->
+
+<!-- The Lake Vegetation Index (LVI) is a multi-metric tool which assesses lake health -->
+<!-- based on the plant community. The field method involves dividing a lake into -->
+<!-- 12 units and identifying plants in four of the 12 units. Data generated on the -->
+<!-- presence of species is used to calculate four biological metrics, each of which -->
+<!-- has been shown to respond to human disturbance: native taxa, invasive taxa, -->
+<!-- sensitive taxa, and dominant coefficient of conservatism (COC). A lake is -->
+<!-- considered impaired if the average of all LVI scores is less than 43. -->
+
 
 <!-- ## Column {.tabset .tabset-fade data-width="550"} -->
 
@@ -1353,14 +1462,15 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 
 <!-- ```{r SCI data} -->
 
-<!-- # Read in the SCI score data: -->
-<!-- sci <- readxl::read_excel('Data/Pinellas_SCI.xlsx', sheet = 'SCI Scores') |> -->
+<!-- # SCI-------------------------------------------------------------------------- -->
+
+<!-- # Read in the SCI score data and get averages: -->
+<!-- sci <- readxl::read_excel('Data/Pinellas_SCI_old.xlsx', sheet = 'SCI Scores') |> -->
 <!--   dplyr::mutate(Date = as.Date(Date), -->
-<!--                 Bio = 'SCI') |> -->
-<!--   dplyr::rename(Score = `SCI Score`) |> -->
-<!--   tidyr::drop_na(Date, Score) |> -->
+<!--                 Bio = 'SCI', -->
+<!--                 Score = SCI) |> -->
 <!--   dplyr::group_by(Segment, WBID, Date, Bio) |> -->
-<!--   dplyr::summarise(Score = mean(Score, na.rm = TRUE)) |> -->
+<!--   dplyr::summarise(dplyr::across(c(Score, SCI, HA, RPS, LVS), meanNA)) |> -->
 <!--   dplyr::ungroup() -->
 
 <!-- # Read in the SCI taxa abundance data: -->
@@ -1371,7 +1481,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--     by = c('Site' = 'Segment') -->
 <!--     ) -->
 
-
+<!-- # Read in the SCI metric data: -->
 <!-- sciMet <- readxl::read_excel('Data/Pinellas_SCI.xlsx', sheet = 'Metrics') |> -->
 <!--   dplyr::mutate(Date = as.Date(Date)) |> -->
 <!--   dplyr::left_join( -->
@@ -1386,23 +1496,48 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--   dplyr::mutate(`Raw Totals` = round(`Raw Totals`,2), -->
 <!--                 `SCI Scores` = round(`SCI Scores`, 2)) -->
 
+<!-- # LVI ------------------------------------------------------------------------- -->
 
+<!-- # Read in the LVI data: -->
 <!-- lvi <- readxl::read_excel('Data/Pinellas_LVI.xlsx') |> -->
 <!--   dplyr::mutate(Date = as.Date(Date), -->
 <!--                 Bio = 'LVI') |> -->
 <!--   dplyr::rename(Score = `LVI Score`) |> -->
 <!--   tidyr::drop_na(Date, Score) |> -->
 <!--   dplyr::group_by(Segment, WBID, Date, Bio) |> -->
-<!--   dplyr::summarise(Score = mean(Score, na.rm = TRUE)) -->
+<!--   dplyr::summarise(Score = mean(Score, na.rm = TRUE)) |> -->
+<!--   dplyr::ungroup() -->
 
+<!-- # Read in the LVI taxa abundance data: -->
+<!-- lviTaxa <- readxl::read_excel('Data/Pinellas_LVI.xlsx', sheet = 'Taxa') |> -->
+<!--   dplyr::mutate(Date = as.Date(Date)) |> -->
+<!--   dplyr::left_join( -->
+<!--     lvi |> dplyr::select(Segment, WBID) |> dplyr::distinct(), -->
+<!--     by = c('Site' = 'Segment') -->
+<!--     ) -->
 
-<!-- bioData <- dplyr::bind_rows(sci,lvi) -->
+<!-- # Read in the LVI metric data: -->
+<!-- lviMet <- readxl::read_excel('Data/Pinellas_LVI.xlsx', sheet = 'Metrics') |> -->
+<!--   dplyr::mutate(Date = as.Date(Date)) |> -->
+<!--   tidyr::pivot_wider( -->
+<!--     names_from = Section, -->
+<!--     values_from = Score, -->
+<!--     names_glue = 'Section {Section}' -->
+<!--     ) |> -->
+<!--   dplyr::left_join( -->
+<!--     lvi |> dplyr::select(Segment, WBID) |> dplyr::distinct(), -->
+<!--     by = c('Site' = 'Segment') -->
+<!--     ) -->
+
+<!-- # Combine the SCI and LVI data for ease of reading based on user click: -->
+<!-- bioData <- dplyr::bind_rows(sci,lvi) |> -->
+<!--   dplyr::mutate_at(c('Score','SCI','HA','RPS','LVS'), function(x) ifelse(is.nan(x), NA, x)) -->
 
 
 <!-- # Get data for each WBID based on user click: -->
 <!-- getBio <- reactive({ -->
 <!--   if (is.null(input$biomap_shape_click)){ -->
-<!--     wbid <- '1474' -->
+<!--     wbid <- '1604B1' -->
 <!--     } else { -->
 <!--       wbid <- getWBID( -->
 <!--         spDat = bios, -->
@@ -1410,107 +1545,181 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--         lng   = input$biomap_shape_click$lng -->
 <!--         ) -->
 <!--     } -->
-
 <!--   list( -->
-<!--     bio = dplyr::filter(bioData, WBID == wbid), -->
-<!--     taxa = dplyr::filter(sciTaxa, WBID == wbid), -->
-<!--     met  = dplyr::filter(sciMet, WBID == wbid) -->
+<!--     bio = bioData |> dplyr::filter(WBID == wbid), -->
+<!--     Staxa = sciTaxa |> dplyr::filter(WBID == wbid), -->
+<!--     Ltaxa = lviTaxa |> dplyr::filter(WBID == wbid), -->
+<!--     Smet  = sciMet |> dplyr::filter(WBID == wbid), -->
+<!--     Lmet  = lviMet |> dplyr::filter(WBID == wbid) -->
 <!--   ) -->
 
-<!--   }) -->
+<!-- }) -->
 
-
-
+<!-- # Time series plot for bio data: -->
 <!-- bioP <- reactive({ -->
 <!--   return(bioPlt(getBio()$bio, bio = ifelse(getBio()$bio$Bio[1] =='SCI', 'SCI', 'LVI'))) -->
 <!-- }) -->
 
+<!-- # Taxa abundance table: -->
 <!-- taxaT <- reactive({ -->
-<!--   return(taxaTbl(getBio()$taxa, type = 'counts')) -->
+<!--   # Get the taxa data based on the selected date: -->
+<!--   dat <- if (getBio()$bio$Bio[1] == 'SCI') { -->
+<!--     getBio()$Staxa |> dplyr::filter(Date == input$sample_date) -->
+<!--   } else { -->
+<!--     getBio()$Ltaxa |> dplyr::filter(Date == input$sample_date) -->
+<!--   } -->
+<!--   return( -->
+<!--     taxaTbl( -->
+<!--       x = dat, -->
+<!--       bio = ifelse(getBio()$bio$Bio[1] == 'SCI', 'SCI', 'LVI'), -->
+<!--       type = 'counts' -->
+<!--       ) -->
+<!--     ) -->
 <!-- }) -->
 
+<!-- # Taxa metric table: -->
 <!-- metT <- reactive({ -->
-<!--   return(taxaTbl(getBio()$met, type = 'metrics')) -->
+<!--   # Get the taxa data based on the selected date: -->
+<!--   dat <- if (getBio()$bio$Bio[1] == 'SCI') { -->
+<!--     getBio()$Smet |> dplyr::filter(Date == input$sample_date) -->
+<!--   } else { -->
+<!--     getBio()$Lmet |> dplyr::filter(Date == input$sample_date) -->
+<!--   } -->
+<!--   return( -->
+<!--     taxaTbl( -->
+<!--       x = dat, -->
+<!--       bio = ifelse(getBio()$bio$Bio[1] == 'SCI', 'SCI', 'LVI'), -->
+<!--       type = 'metrics' -->
+<!--       ) -->
+<!--     ) -->
 <!-- }) -->
 
-
+<!-- # Box showing the most recent score (probably only for LVI): -->
 <!-- output$currentScore <- renderUI({ -->
 
+<!--   # Get the most recent score: -->
 <!--   score <- tail(getBio()$bio$Score, 1) -->
-<!--   scoreInfo <- paste0('Current ', -->
+
+<!--   # Make scorebox title: -->
+<!--   scoreInfo <- paste0('Most Recent ', -->
 <!--                       dplyr::case_when( -->
 <!--                         getBio()$bio$Bio[1] == 'SCI' ~ 'Stream Condition Index (SCI)', -->
 <!--                         getBio()$bio$Bio[1] == 'LVI' ~ 'Lake Vegetation Index (LVI)' -->
 <!--                       ), -->
 <!--                       ' Score (',format(tail(getBio()$bio$Date, 1), "%m/%d/%Y"), ')') -->
 
+<!--   # Set status of the score: -->
 <!--   status <- dplyr::case_when( -->
-<!--     getBio()$bio$Bio[1] == 'SCI' & score <= 40 ~ "IMPAIRED", -->
-<!--     getBio()$bio$Bio[1] == 'SCI' & score > 40 & score <= 65 ~ "MARGINAL", -->
-<!--     getBio()$bio$Bio[1] == 'SCI' & score > 65 ~ "HEALTHY", -->
-<!--     getBio()$bio$Bio[1] == 'LVI' & score <= 42 ~ "IMPAIRED", -->
-<!--     getBio()$bio$Bio[1] == 'LVI' & score > 42 ~ "HEALTHY" -->
+<!--     getBio()$bio$Bio[1] == 'SCI' & score < 40 ~ "IMPAIRED", -->
+<!--     getBio()$bio$Bio[1] == 'SCI' & score >= 40 ~ "HEALTHY", -->
+<!--     getBio()$bio$Bio[1] == 'LVI' & score < 43 ~ "IMPAIRED", -->
+<!--     getBio()$bio$Bio[1] == 'LVI' & score >= 43 ~ "HEALTHY" -->
 <!--   ) -->
 
-
+<!--   # Score box settings: -->
 <!--   htmltools::div( -->
-<!--     style = "text-align: center;  -->
-<!--              padding: 10px 10px;  -->
-<!--              margin: 0px 0px;  -->
-<!--              border: 2px solid #ccc;  -->
-<!--              border-radius: 10px;  -->
-<!--              background-color: #f5faff;  -->
+<!--     style = "text-align: center; -->
+<!--              padding: 10px 10px; -->
+<!--              margin: 0px 0px; -->
+<!--              border: 2px solid #ccc; -->
+<!--              border-radius: 10px; -->
+<!--              background-color: #f5faff; -->
 <!--              font-family: sans-serif; -->
 <!--              width: 100%;", -->
-
 <!--     htmltools::tags$h3(scoreInfo, style = "margin: 0; padding-bottom: 5px; color: #555;"), -->
 <!--     htmltools::tags$h1(score, style = "margin: 0; font-size: 40px; color: #2c3e50;"), -->
 <!--     htmltools::tags$h2(status, style = paste0( -->
 <!--       "margin: 5px 0 0 0; font-weight: bold; color: ", -->
 <!--       dplyr::case_when( -->
 <!--         status == "IMPAIRED" ~ "#e74c3c", -->
-<!--         status == "MARGINAL" ~ "#f39c12", -->
 <!--         status == "HEALTHY" ~ "#2ecc71" -->
 <!--       ) -->
 <!--     )) -->
 <!--   ) -->
 <!-- }) -->
 
+<!-- # Box showing the mean score of the bio type based on previous 7.5 years of data: -->
 <!-- output$meanScore <- renderUI({ -->
 
-<!--   score <- round(meanNA(getBio()$bio$Score), 0) -->
+<!--   # Get the mean score based on the last 7.5 years of data: -->
+<!--   avg7yr <- (getBio()$bio |> -->
+<!--                dplyr::filter( -->
+<!--                  Date >= (max(Date) - lubridate::years(7) - months(6))) -->
+<!--              )$Score -->
+<!--   score <- round(meanNA(avg7yr), 0) -->
+
+<!--   # Make scorebox title: -->
 <!--   scoreInfo <- paste0('Average ', -->
 <!--                       dplyr::case_when( -->
 <!--                         getBio()$bio$Bio[1] == 'SCI' ~ 'Stream Condition Index (SCI)', -->
 <!--                         getBio()$bio$Bio[1] == 'LVI' ~ 'Lake Vegetation Index (LVI)' -->
 <!--                       ), ' Score') -->
 
+<!--   # Set status of the score: -->
 <!--   status <- dplyr::case_when( -->
-<!--     getBio()$bio$Bio[1] == 'SCI' & score <= 40 ~ "IMPAIRED", -->
-<!--     getBio()$bio$Bio[1] == 'SCI' & score > 40 & score <= 65 ~ "MARGINAL", -->
-<!--     getBio()$bio$Bio[1] == 'SCI' & score > 65 ~ "HEALTHY", -->
-<!--     getBio()$bio$Bio[1] == 'LVI' & score <= 42 ~ "IMPAIRED", -->
-<!--     getBio()$bio$Bio[1] == 'LVI' & score > 42 ~ "HEALTHY" -->
+<!--     getBio()$bio$Bio[1] == 'SCI' & score < 40  ~ "IMPAIRED", -->
+<!--     getBio()$bio$Bio[1] == 'SCI' & score >= 40 & min(tail(avg7yr,2)) >= 35 ~ "HEALTHY", -->
+<!--     getBio()$bio$Bio[1] == 'LVI' & score < 43 ~ "IMPAIRED", -->
+<!--     getBio()$bio$Bio[1] == 'LVI' & score >= 43 ~ "HEALTHY", -->
+<!--     TRUE ~ "IMPAIRED" -->
 <!--   ) -->
 
-
+<!--   # Score box settings: -->
 <!--   htmltools::div( -->
-<!--     style = "text-align: center;  -->
-<!--              padding: 10px 10px;  -->
-<!--              margin: 0px 0px;  -->
-<!--              border: 2px solid #ccc;  -->
-<!--              border-radius: 10px;  -->
-<!--              background-color: #f5faff;  -->
+<!--     style = "text-align: center; -->
+<!--              padding: 10px 10px; -->
+<!--              margin: 0px 0px; -->
+<!--              border: 2px solid #ccc; -->
+<!--              border-radius: 10px; -->
+<!--              background-color: #f5faff; -->
 <!--              font-family: sans-serif; -->
 <!--              width: 100%;", -->
-
 <!--     htmltools::tags$h3(scoreInfo, style = "margin: 0; padding-bottom: 5px; color: #555;"), -->
 <!--     htmltools::tags$h1(score, style = "margin: 0; font-size: 40px; color: #2c3e50;"), -->
 <!--     htmltools::tags$h2(status, style = paste0( -->
 <!--       "margin: 5px 0 0 0; font-weight: bold; color: ", -->
 <!--       dplyr::case_when( -->
 <!--         status == "IMPAIRED" ~ "#e74c3c", -->
-<!--         status == "MARGINAL" ~ "#f39c12", -->
+<!--         status == "HEALTHY" ~ "#2ecc71" -->
+<!--       ) -->
+<!--     )) -->
+<!--   ) -->
+<!-- }) -->
+
+<!-- # Box showing the most recent habitat assessment score: -->
+<!-- output$haScore <- renderUI({ -->
+
+<!--   # Get the most recent score: -->
+<!--   score <- getBio()$bio |> -->
+<!--     dplyr::filter(Date == input$sample_date) |> -->
+<!--     dplyr::pull(HA) -->
+
+<!--   # Make scorebox title: -->
+<!--   scoreInfo <- paste0('Habitat Assessment (HA) Score (', -->
+<!--                       format(as.Date(input$sample_date), '%m/%d/%Y'), ')') -->
+
+<!--   # Set status of the score: -->
+<!--   status <- dplyr::case_when( -->
+<!--     score < 40  ~ "IMPAIRED", -->
+<!--     score >= 40 ~ "HEALTHY" -->
+<!--   ) -->
+
+<!--   # Score box settings: -->
+<!--   htmltools::div( -->
+<!--     style = "text-align: center; -->
+<!--              padding: 10px 10px; -->
+<!--              margin: 0px 0px; -->
+<!--              border: 2px solid #ccc; -->
+<!--              border-radius: 10px; -->
+<!--              background-color: #f5faff; -->
+<!--              font-family: sans-serif; -->
+<!--              width: 100%;", -->
+<!--     htmltools::tags$h3(scoreInfo, style = "margin: 0; padding-bottom: 5px; color: #555;"), -->
+<!--     htmltools::tags$h1(score, style = "margin: 0; font-size: 40px; color: #2c3e50;"), -->
+<!--     htmltools::tags$h2(status, style = paste0( -->
+<!--       "margin: 5px 0 0 0; font-weight: bold; color: ", -->
+<!--       dplyr::case_when( -->
+<!--         score == "IMPAIRED" ~ "#e74c3c", -->
 <!--         status == "HEALTHY" ~ "#2ecc71" -->
 <!--       ) -->
 <!--     )) -->
@@ -1518,18 +1727,127 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!-- }) -->
 
 
+<!-- output$rpsScore <- renderUI({ -->
+
+<!--   score <- getBio()$bio |> -->
+<!--     dplyr::filter(Date == input$sample_date) |> -->
+<!--     dplyr::pull(RPS) -->
+<!--   scoreInfo <- paste0('Rapid Periphyton Survey (RPS) Score (', -->
+<!--                       format(as.Date(input$sample_date), "%m/%d/%Y"), ')') -->
+
+<!--   status <- dplyr::case_when( -->
+<!--     score < 25  ~ "IMPAIRED", -->
+<!--     score >= 25 ~ "HEALTHY" -->
+<!--   ) -->
+
+<!--   htmltools::div( -->
+<!--     style = "text-align: center; -->
+<!--              padding: 10px 10px; -->
+<!--              margin: 0px 0px; -->
+<!--              border: 2px solid #ccc; -->
+<!--              border-radius: 10px; -->
+<!--              background-color: #f5faff; -->
+<!--              font-family: sans-serif; -->
+<!--              width: 100%;", -->
+<!--     htmltools::tags$h3(scoreInfo, style = "margin: 0; padding-bottom: 5px; color: #555;"), -->
+<!--     htmltools::tags$h1(score, style = "margin: 0; font-size: 40px; color: #2c3e50;"), -->
+<!--     htmltools::tags$h2(status, style = paste0( -->
+<!--       "margin: 5px 0 0 0; font-weight: bold; color: ", -->
+<!--       dplyr::case_when( -->
+<!--         status == "IMPAIRED" ~ "#e74c3c", -->
+<!--         status == "HEALTHY" ~ "#2ecc71" -->
+<!--       ) -->
+<!--     )) -->
+<!--   ) -->
+<!-- }) -->
+
+
+<!-- output$lvsScore <- renderUI({ -->
+
+<!--   score <- getBio()$bio |> -->
+<!--     dplyr::filter(Date == input$sample_date) |> -->
+<!--     dplyr::pull(LVS) -->
+<!--   scoreInfo <- paste0('Linear Vegetation Survey (LVS) Score (', -->
+<!--                       format(as.Date(input$sample_date), "%m/%d/%Y"), ')') -->
+
+<!--   status <- dplyr::case_when( -->
+<!--     score < 25  ~ "IMPAIRED", -->
+<!--     score >= 25 ~ "HEALTHY" -->
+<!--   ) -->
+
+<!--   htmltools::div( -->
+<!--     style = "text-align: center; -->
+<!--              padding: 10px 10px; -->
+<!--              margin: 0px 0px; -->
+<!--              border: 2px solid #ccc; -->
+<!--              border-radius: 10px; -->
+<!--              background-color: #f5faff; -->
+<!--              font-family: sans-serif; -->
+<!--              width: 100%;", -->
+<!--     htmltools::tags$h3(scoreInfo, style = "margin: 0; padding-bottom: 5px; color: #555;"), -->
+<!--     htmltools::tags$h1(score, style = "margin: 0; font-size: 40px; color: #2c3e50;"), -->
+<!--     htmltools::tags$h2(status, style = paste0( -->
+<!--       "margin: 5px 0 0 0; font-weight: bold; color: ", -->
+<!--       dplyr::case_when( -->
+<!--         status == "IMPAIRED" ~ "#e74c3c", -->
+<!--         status == "HEALTHY" ~ "#2ecc71" -->
+<!--       ) -->
+<!--     )) -->
+<!--   ) -->
+<!-- }) -->
+
+<!-- # Input date selector for taxa and metric tables: -->
+<!-- observeEvent(getBio(), { -->
+<!--   updateSelectInput( -->
+<!--     inputId = 'sample_date', -->
+<!--     choices = getBio()$bio$Date, -->
+<!--     selected = max(getBio()$bio$Date) -->
+<!--   ) -->
+<!-- }) -->
+
+
+<!-- output$scoreBoxes <- renderUI({ -->
+<!--   req(getBio()) -->
+
+<!--   if (getBio()$bio$Bio[1] == "LVI") { -->
+<!--     fillCol( -->
+<!--       flex = c(1,1), -->
+<!--       uiOutput('currentScore'), -->
+<!--       uiOutput('meanScore') -->
+<!--     ) -->
+<!--   } else { -->
+<!--     fillCol( -->
+<!--       flex = c(1,1), -->
+<!--       fillRow( -->
+<!--         flex = c(1,1), -->
+<!--               uiOutput('meanScore'), -->
+<!--               uiOutput('haScore') -->
+<!--       ), -->
+<!--       fillRow(flex = c(1,1), -->
+<!--               uiOutput('lvsScore'), -->
+<!--               uiOutput('rpsScore') -->
+<!--       ) -->
+<!--     ) -->
+<!--   } -->
+<!-- }) -->
+
 
 
 <!-- fillCol(flex = c(1,1,0.5), -->
 <!--         fillRow(flex = c(1,1), -->
-<!--                 fillCol(flex = c(1,1), -->
-<!--                         uiOutput('currentScore'), -->
-<!--                         uiOutput('meanScore') -->
-<!--                 ), -->
+<!--                     fillCol( -->
+<!--                       uiOutput("scoreBoxes") -->
+<!--                       ), -->
 <!--                 plotly::renderPlotly(bioP()), -->
 <!--                 ), -->
 <!--         fillRow(flex = c(1,1,1), -->
-<!--                 plotly::renderPlotly(metT()), -->
+<!--                 fillCol(flex = c(0.2,0.95), -->
+<!--                         div( -->
+<!--                           style = "font-size: 14px", -->
+<!--                           selectInput('sample_date', 'Select Date to View Sample Taxa and Metrics:', -->
+<!--                                     choices = NULL) -->
+<!--                           ), -->
+<!--                         plotly::renderPlotly(metT())), -->
 <!--                 plotly::renderPlotly(taxaT()) -->
 <!--         ) -->
 <!-- ) -->
@@ -1989,9 +2307,9 @@ tab <- reactive({
 
 # Data download:
 output$datFull <- downloadHandler(
-  filename = function(){'Pinellas_County_Water_Quality_Data_2003_2024.xlsx'},
+  filename = function(){wqPath},
   content = function(file){
-    file.copy('Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx',file)
+    file.copy(wqPath, file)
   }
 )
 
@@ -1999,10 +2317,8 @@ output$datSel <- downloadHandler(
   filename = function(){paste0('Pinellas_County_',site(),'_Water_Quality_Data.xlsx')},
   content = function(file){
     
-    units <- readxl::read_excel('Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx',
-                          sheet = 'Units')
-    quals <- readxl::read_excel('Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx',
-                          sheet = 'Qualifier Codes')
+    units <- readxl::read_excel(wqPath, sheet = 'Units')
+    quals <- readxl::read_excel(wqPath, sheet = 'Qualifier Codes')
     
     sheets <- list('Water Quality Data' = datWB(), 'Units' = units, 'Qualifiers' = quals)
     
@@ -2019,7 +2335,7 @@ fillCol(
     column(6, shinyWidgets::downloadBttn('datSel', 'Download Selected Site Data',
                                      style = 'simple', block = TRUE, color = 'success')),
     column(6, shinyWidgets::downloadBttn('datFull', paste0('Download All Site Data (',
-                          round(file.size('Data/Pinellas_County_Water_Quality_Data_2003_2024.xlsx')/(1024^2),1),' Mb)'),
+                          round(file.size(wqPath)/(1024^2),1),' Mb)'),
                                          style = 'simple', block = TRUE, color = 'success'))
   ),
 
@@ -2075,5 +2391,9 @@ fillCol(flex = c(0.07, 1),
   reactable::renderReactable(RTtab())
 )
 
-
 ```
+
+<!-- ### Bioassessments -->
+
+
+
