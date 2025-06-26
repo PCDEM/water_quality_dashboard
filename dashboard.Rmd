@@ -22,7 +22,7 @@ resource_files:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 
-# Set na.rm = TRUE for mean
+# Set na.rm = TRUE for mean and geomean:
 meanNA <- purrr::partial(mean, na.rm = TRUE)
 geomNA <- purrr::partial(psych::geometric.mean, na.rm = TRUE)
 
@@ -36,8 +36,7 @@ source('R/funcs.R')
 wqPath <- 'Data/Pinellas_County_Water_Quality_Data_2003_2025.xlsx'
 
 # Import water quality data:
-wqInit <- readxl::read_excel(wqPath,
-                           guess_max = 50000) |>
+wqInit <- readxl::read_excel(wqPath, guess_max = 50000) |>
   dplyr::mutate(Date = as.Date(Date))
 
 # If a secchi value is VOB, convert it NA since it doesn't represent the true
@@ -107,7 +106,8 @@ wqShp <- sf::st_read('GIS/Waterbody_IDs_(WBIDs).shp') |>
     wqIn |> 
       dplyr::select(Basin = Site, WBID) |>
       dplyr::mutate(Basin = substr(Basin,1,2)) |>
-      dplyr::distinct(), by = 'WBID'
+      dplyr::distinct(), 
+    by = 'WBID'
     )
 
 ```
@@ -168,7 +168,7 @@ wqLeg <- leg(
   colors = c('#00244c', '#6A5ACD', '#40E0D0', '#006400', '#E69F00', '#696969'),
   fOp    = 0.5, 
   h      = 20, 
-  w      =20
+  w      = 20
   )
 
 # Add other elements to the map:
@@ -414,7 +414,6 @@ Sinf <- function(site){
   if (Sw == 'Not Sampled') noInfo(input, 'info')
   }
 
-
 ```
 
 Overview
@@ -501,10 +500,11 @@ knitr::include_graphics('www/collage.png')
 </div>
 
 
-Water Quality 
+Water Quality
 ===========================================================
 
 ## Column {.tabset .tabset-fade data-width="280"}
+
 
 ```{r water quality modal}
 # Initialize a reactive value to track if a water quality subtab has been clicked yet:
@@ -696,7 +696,12 @@ knitr::include_graphics('www/hex.jpg')
 <br>
 
 A computer program is then used to randomly select points within each
-hexagon with equal probability provided to each hexagon. For each sampling event, four points are selected throughout the individual stratum and are labeled A, B, C, and D. The data displayed for the stratum on the time-series plots are an average of those four points. Click the "Data Downloads" tab to view site-specific data. For more information on our water quality sampling design, types of data collected, long-term water quality trends, and summary statistics click on the "Annual Report" tab.
+hexagon with equal probability provided to each hexagon. For each sampling event, 
+four points are selected throughout the individual stratum and are labeled A, B, C, 
+and D. The data displayed for the stratum on the time-series plots are an average 
+of those four points. Click the "Data Downloads" tab to view site-specific data. 
+For more information on our water quality sampling design, types of data collected,
+long-term water quality trends, and summary statistics click on the "Annual Report" tab.
 
 
 ## Column {.tabset .tabset-fade data-width="610"}
@@ -704,55 +709,46 @@ hexagon with equal probability provided to each hexagon. For each sampling event
 ### Oxygen, Nutrients, & Chlorophyll-a
 
 ```{r}
-
 # Display the data for DO, chl_a, TN, and TP
 fillCol(flex = c(1, rep(1, 4)),
         pltmsg(getData, "DO", DOplo),
         pltmsg(getData, "chl_a", chlplo),
         pltmsg(getData, "TN", TNplo),
         pltmsg(getData, "TP", TPplo))
-
 ```
 
 ### Water Clarity
 
 ```{r}
-
 # Display the data for TSS, turbidity, and Secchi. Secchi not collected on stream 
 # sites, only lakes and coastal water:
 fillCol(flex = c(1, rep(1, 3)),
     pltmsg(getData, "TSS", TSSplo),
     pltmsg(getData, "Turbidity", NTUplo),
     pltmsg(getData, "Secchi", Secplo))
-
 ```
 
 ### Temperature & Salinity
 
 ```{r}
-
 # Display the data for temperature and salinity:
 fillCol(flex = c(1, rep(1, 3)),
     pltmsg(getData, "Temp", Tplo),
     pltmsg(getData, "Salinity", Splo))
-
 ```
 
 ### Bacteria
 
 ```{r}
-
 # Bacteria samples only collected in freshwater and tidal stream sites:
 fillCol(flex = c(1, rep(1, 2)),
     pltmsg(getData, "Ecoli", eplo),
     pltmsg(getData, "Entero", entplo))
-
 ```
 
 ### Report Card
 
 ```{r}
-
 # Create slider input to narrow down the report card:
 sliderInput('year', 'Select year range', 
             min   = 2003, 
@@ -806,8 +802,7 @@ rcd <- reactive({
       n_below = dplyr::case_when(
         Type == 'MARINE' ~ length(which(`DO%` < 42)),
         TRUE ~ length(which(`DO%` < 38))
-      )
-      ) |>
+      )) |>
     dplyr::distinct() |>
     dplyr::mutate(do_grade = ifelse((n_below/total_samples) >= 0.1, 'Fail', 'Pass'))
   
@@ -815,21 +810,22 @@ rcd <- reactive({
   # WBIDs according to FDEP criteria. Some of the coastal sites using geometric
   # mean for chl-a, TP, and TN, while other coastal sites use the geometric mean
   # for nutrient and arithmetic mean for chl-a.
-  if (! unique(rd$WBID) %in% c('1558I','1558H','1558H2','1558G','1558F', 1661,'1528A',
-                   '1558N','1694A','1694B','1618C','1558B','1558C')) {
-  repo <- rd |>
-    dplyr::select(-`DO%`) |>
-    dplyr::group_by(WBID, Year = lubridate::year(Date)) |>
-    dplyr::summarise_if(is.numeric, psych::geometric.mean, na.rm = TRUE)
-  } else {
+  if (! unique(rd$WBID) %in% c('1558I','1558H','1558H2','1558G','1558F', 1661,
+                               '1528A', '1558N','1694A','1694B','1618C','1558B',
+                               '1558C')) {
     repo <- rd |>
       dplyr::select(-`DO%`) |>
       dplyr::group_by(WBID, Year = lubridate::year(Date)) |>
-      dplyr::summarise(`Chl-a`     = meanNA(`Chl-a`),
-                       TN          = psych::geometric.mean(TN),
-                       TP          = psych::geometric.mean(TP),
-                       `E_coli`    = psych::geometric.mean(E_coli),
-                       Enterococci = psych::geometric.mean(Enterococci)) 
+      dplyr::summarise_if(is.numeric, psych::geometric.mean, na.rm = TRUE)
+    } else {
+      repo <- rd |>
+        dplyr::select(-`DO%`) |>
+        dplyr::group_by(WBID, Year = lubridate::year(Date)) |>
+        dplyr::summarise(`Chl-a`     = meanNA(`Chl-a`),
+                         TN          = psych::geometric.mean(TN),
+                         TP          = psych::geometric.mean(TP),
+                         `E_coli`    = psych::geometric.mean(E_coli),
+                         Enterococci = psych::geometric.mean(Enterococci)) 
   }
   
   # Filter the water quality criteria for the selected site:
@@ -895,7 +891,8 @@ rcd <- reactive({
          ifelse(rc$Enterococci == "Fail", "#f4b084", "white")))),
       align  = 'center',
       font   = list(color = 'black', size = 11),
-      height = 21)) |>
+      height = 21)
+    ) |>
     plotly::layout(
       title = list(text = title,
                    font = list(size = 120 / sqrt(nchar(title))),
@@ -903,12 +900,9 @@ rcd <- reactive({
       )
   })
 
-
  # display table
  fillCol(flex = 1,
          plotly::renderPlotly(rcd()))
-
- 
 ```
 
 
@@ -1117,7 +1111,7 @@ output$entg <- highcharter::renderHighchart({
     )
   })
 
-# Allows for intial gauge render when first navigating to water quality tab from
+# Allows for initial gauge render when first navigating to water quality tab from
 # overview page:
 renderG <- reactiveVal(TRUE)
 
@@ -1158,7 +1152,9 @@ observeEvent(input$active_tab, {
     output$gaugePlots <- renderUI({
       fillCol(flex = c(1, rep(1,4)),
       paste('\nThis water quality report card for the',stringr::str_to_title(site()),
-                'watershed is based on criteria set by FDEP with a Pass/Fail status for each parameter determined by annual threshold exceedence of 10% of samples (dissolved oxygen) or geometric mean (all other parameters).'),
+                'watershed is based on criteria set by FDEP with a Pass/Fail status 
+            for each parameter determined by annual threshold exceedence of 10% of 
+            samples (dissolved oxygen) or geometric mean (all other parameters).'),
         paste0(''),
         paste0(''),
         paste0(''))
@@ -1855,7 +1851,6 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!-- ``` -->
 
 
-
 Red Tide & Beach Bacteria
 ===========================================================
 
@@ -1863,9 +1858,17 @@ Red Tide & Beach Bacteria
 
 ### Red Tide
 
-Red tide is a natural phenomenon in the waters around Pinellas County, caused by an overgrowth of microscopic algae called *Karenia brevis*. These algae produce toxins that can affect marine life and lead to fish kills, as well as cause respiratory irritation in humans, particularly for those with asthma or other respiratory conditions. It often gives the water a reddish or brownish tint, hence the name "red tide."
+Red tide is a natural phenomenon in the waters around Pinellas County, caused by 
+an overgrowth of microscopic algae called *Karenia brevis*. These algae produce 
+toxins that can affect marine life and lead to fish kills, as well as cause respiratory 
+irritation in humans, particularly for those with asthma or other respiratory conditions. 
+It often gives the water a reddish or brownish tint, hence the name "red tide."
 
-While red tide blooms can occur year-round, they are most common in Florida around late summer to early fall. The blooms are driven by a combination of warm water temperatures, nutrient availability, and favorable currents. During red tide events, it’s best to limit beach activities, as the airborne toxins can cause eye, nose, and throat irritation. 
+While red tide blooms can occur year-round, they are most common in Florida around 
+late summer to early fall. The blooms are driven by a combination of warm water
+temperatures, nutrient availability, and favorable currents. During red tide events, 
+it’s best to limit beach activities, as the airborne toxins can cause eye, nose,
+and throat irritation. 
 
 <br>
 <br>
@@ -1877,9 +1880,20 @@ knitr::include_graphics('www/k_brevis.png')
 
 ### Beach Bacteria
 
-*Enterococcus* is a type of bacteria found in water, soil, and the intestines of humans and animals. This bacterium is used as an indicator of water quality at beaches, as high levels can signal contamination from sources like sewage, stormwater runoff, or animal waste. This contamination can pose health risks, as exposure to *Enterococcus* in water can lead to gastrointestinal illness and a variety of infections.
+*Enterococcus* is a type of bacteria found in water, soil, and the intestines of 
+humans and animals. This bacterium is used as an indicator of water quality at 
+beaches, as high levels can signal contamination from sources like sewage, stormwater 
+runoff, or animal waste. This contamination can pose health risks, as exposure 
+to *Enterococcus* in water can lead to gastrointestinal illness and a variety of
+infections.
 
-High levels of *Enterococcus* can be the result of heavy rainfall or stormwater discharge, which can wash contaminants into coastal waters. When *Enterococcus* is elevated, it’s advisable to avoid swimming, particularly for people with open wounds or weakened immune systems. While Pinellas County collects this data to inform the public about water quality issues, the [FL Department of Health](https://www.floridahealth.gov/environmental-health/beach-water-quality/county-detail.html?County=Pinellas&Zip=33701-3109) remains the official source for updates and advisories about beach conditions and water safety.
+High levels of *Enterococcus* can be the result of heavy rainfall or stormwater 
+discharge, which can wash contaminants into coastal waters. When *Enterococcus* 
+is elevated, it’s advisable to avoid swimming, particularly for people with open
+wounds or weakened immune systems. While Pinellas County collects this data to 
+inform the public about water quality issues, the 
+[FL Department of Health](https://www.floridahealth.gov/environmental-health/beach-water-quality/county-detail.html?County=Pinellas&Zip=33701-3109) remains the official source for updates and advisories about 
+beach conditions and water safety.
 
 
 <br>
@@ -1890,11 +1904,9 @@ knitr::include_graphics('www/entero.png')
 
 
 ```{r}
-
 # Read in red tide and entero data and set limits for color coding:
 dat <- readxl::read_excel('Data/Pinellas_RedTide_Entero.xlsx', guess_max = 50000) |>
   dplyr::mutate(
-    `Karenia brevis` = stringr::str_to_title(`Karenia brevis`),
     `Karenia brevis` = as.numeric(`Karenia brevis`),
     Enterococcus = as.numeric(Enterococcus),
     Color = dplyr::case_when(
@@ -1911,8 +1923,8 @@ dat <- readxl::read_excel('Data/Pinellas_RedTide_Entero.xlsx', guess_max = 50000
       TRUE ~ 'red'
     ),
     Date = format(Date, '%m/%d/%Y'))
-
 ```
+
 
 
 ## Column {.tabset .tabset-fade data-width="310"}
@@ -1929,11 +1941,11 @@ rdate <- dat |>
   unique()
 
 # Create a sequence of dates not in the dataset for the date picker:
-rd <- seq.Date(rdate$Date[1], rdate$Date[length(rdate$Date)], by = 'day')
-rd <- rd[! rd %in% rdate$Date]
-
-# UI for date input and buttons
-shinyjs::useShinyjs()  # Enable shinyjs
+rd <- data.frame(
+  Date = seq.Date(rdate$Date[1], rdate$Date[length(rdate$Date)], by = 'day')
+  ) |>
+  dplyr::filter(! Date %in% rdate$Date) |>
+  dplyr::pull(Date)
 
 # Make date picker to display red tide data
 fluidRow(
@@ -1963,33 +1975,33 @@ fluidRow(
   )
 )
 
-# Server logic to handle date updates with edge case handling
-observe({
-  current_date1 <- input$rdate
-  
-  # Update button states based on the selected date
-  if (!is.null(current_date1)) {
-    # Disable "Previous" if at the earliest date
-    if (current_date1 <= min(rdate$Date)) {
-      shinyjs::disable("prev_date1")
-    } else {
-      shinyjs::enable("prev_date1")
-    }
-    
-    # Disable "Next" if at the latest date
-    if (current_date1 >= max(rdate$Date)) {
-      shinyjs::disable("next_date1")
-    } else {
-      shinyjs::enable("next_date1")
-    }
-  }
-})
+# # Server logic to handle date updates with edge case handling
+# observe({
+#   current_date1 <- input$rdate
+#   
+#   # Update button states based on the selected date
+#   if (!is.null(current_date1)) {
+#     # Disable "Previous" if at the earliest date
+#     if (current_date1 <= min(rdate$Date)) {
+#       shinyjs::disable("prev_date1")
+#     } else {
+#       shinyjs::enable("prev_date1")
+#     }
+#     
+#     # Disable "Next" if at the latest date
+#     if (current_date1 >= max(rdate$Date)) {
+#       shinyjs::disable("next_date1")
+#     } else {
+#       shinyjs::enable("next_date1")
+#     }
+#   }
+# })
 
-# Update date picker to the previous date in the dataset. 
+# Update date picker to the previous date in the dataset.
 observeEvent(input$prev_date1, {
   current_date1 <- as.Date(input$rdate)
   prev_date1 <- max(rdate$Date[rdate$Date < current_date1], na.rm = TRUE)
-  
+
   # Check if prev_date is valid before updating
   if (!is.infinite(prev_date1) && !is.na(prev_date1)) {
     shinyWidgets::updateAirDateInput(session, "rdate", value = prev_date1)
@@ -2000,7 +2012,7 @@ observeEvent(input$prev_date1, {
 observeEvent(input$next_date1, {
   current_date1 <- as.Date(input$rdate)
   next_date1 <- min(rdate$Date[rdate$Date > current_date1], na.rm = TRUE)
-  
+
   # Check if next_date is valid before updating
   if (!is.infinite(next_date1) && !is.na(next_date1)) {
     shinyWidgets::updateAirDateInput(session, "rdate", value = next_date1)
@@ -2052,7 +2064,7 @@ rtm <- reactive({
       popup = ~paste("<u><b>Red Tide Monitoring</b></u>", "<br>",
                      "Sample Result: ", `Karenia brevis`,"cells/L","<br>",
                      "Location: ", Site, "<br>",
-                     "Sample Date: ", Date)
+                     "Sample Date: ", format(Date, '%m/%d/%Y'))
       ) |>
     leaflegend::addLegendImage(
       images      = rtLeg,
@@ -2220,7 +2232,7 @@ bm <- reactive({
       popup = ~paste("<u><b>Bacteria Monitoring (Enterococcus)</b></u>", "<br>",
                      "Sample Result: ", Enterococcus, "MPN/100mL","<br>",
                      "Location: ", Site, "<br>",
-                     "Sample Date: ", Date)
+                     "Sample Date: ", format(Date, '%m/%d/%Y'))
       ) |>
     leaflegend::addLegendImage(
       images      = bLeg,
