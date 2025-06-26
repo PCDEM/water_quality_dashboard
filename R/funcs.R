@@ -655,7 +655,7 @@ getWBID <- function(spDat, lat, lng){
 }
 
 # Function to create a plotly plot
-plt <- function(data, var,crit = 0){
+plt <- function(data, var, crit = 0){
   p <- plotly::plot_ly(
     data, 
     x      = ~Date, 
@@ -781,15 +781,18 @@ leg <- function(shape, n, colors, fOp, h, w){
 table_row <- function(label, value, bg_color, color = "black") {
   paste0(
     "<tr style='background-color: ", bg_color, ";'>",
-    "<td style='text-align: left; padding: 2px; border: 1px solid black;'><b>", label, "</b></td>",
-    "<td style='text-align: right; padding: 2px; border: 1px solid black; color:", color, ";'>", value, "</td>",
+    "<td style='text-align: left; padding: 2px; border: 1px solid black;'><b>", 
+    label, "</b></td>",
+    "<td style='text-align: right; padding: 2px; border: 1px solid black; color:", 
+    color, ";'>", value, "</td>",
     "</tr>"
   )
 }
 
 # Generate the entire table popup with conditional rows
-create_popup <- function(ID, REGION, Basin, HUC, WBID, Area, CLASS, Type, Status, DO_crit,
-                         chla_crit, TN_crit, TP_crit, Ecoli_crit, Entero_crit, wq = TRUE) {
+create_popup <- function(ID, REGION, Basin, HUC, WBID, Area, CLASS, Type, Status, 
+                         DO_crit, chla_crit, TN_crit, TP_crit, Ecoli_crit, 
+                         Entero_crit, wq = TRUE) {
   
   # Ensure Type is a single character value
   Type <- as.character(Type[1])  
@@ -802,10 +805,12 @@ create_popup <- function(ID, REGION, Basin, HUC, WBID, Area, CLASS, Type, Status
   popup_content <- paste0(
     "<div style='font-family: Arial; font-size: 12px; padding: 5px;'>",
     "<b>", ID, "</b><br>",
-    "<table style='border-collapse: collapse; width: 100%; font-size: 12px; line-height: 1; border: 1px solid black;'>",
+    "<table style='border-collapse: collapse; width: 100%; font-size: 12px; 
+    line-height: 1; border: 1px solid black;'>",
     
     table_row("Sampling Status", Status, c1, 
-              ifelse(Status == "Active", "green", ifelse(Status == "Inactive", "red", "black"))),
+              ifelse(Status == "Active", "green", ifelse(Status == "Inactive", 
+                                                         "red", "black"))),
     table_row("Pinellas Basin", Basin, c2),
     table_row("Region", REGION, c1),
     table_row("HUC", HUC, c2),
@@ -818,21 +823,32 @@ create_popup <- function(ID, REGION, Basin, HUC, WBID, Area, CLASS, Type, Status
   if (wq == TRUE){
     # Only add FDEP Limits if Type is NOT "NOT SAMPLED"
     if (!identical(Type, "NOT SAMPLED")) {
-      popup_content <- paste0(popup_content,
-                              table_row("Water Type", stringr::str_to_title(Type), c2),
-                              table_row("FDEP DO Limit", paste0(DO_crit, ifelse(is.na(DO_crit), "", "% sat")), c1),
-                              table_row("FDEP Chl-a Limit", paste(chla_crit, ifelse(is.na(chla_crit), "", "µg/L")), c2),
-                              table_row("FDEP TN Limit", paste(TN_crit, ifelse(is.na(TN_crit), "", "mg/L")), c1),
-                              table_row("FDEP TP Limit", paste(TP_crit, ifelse(is.na(TP_crit), "", "mg/L")), c2)
+      popup_content <- paste0(
+        popup_content,
+        table_row("Water Type", stringr::str_to_title(Type), c2),
+        table_row("FDEP DO Limit", 
+                  paste0(DO_crit, ifelse(is.na(DO_crit), "", "% sat")), c1),
+        table_row("FDEP Chl-a Limit", 
+                  paste(chla_crit, ifelse(is.na(chla_crit), "", "µg/L")), c2),
+        table_row("FDEP TN Limit", 
+                  paste(TN_crit, ifelse(is.na(TN_crit), "", "mg/L")), c1),
+        table_row("FDEP TP Limit",
+                  paste(TP_crit, ifelse(is.na(TP_crit), "", "mg/L")), c2)
       )
       
       # Conditionally add bacteria limits
       if (Type == "FRESHWATER") {
-        popup_content <- paste0(popup_content, 
-                                table_row("FDEP E. coli Limit", paste(Ecoli_crit, ifelse(is.na(Ecoli_crit), "", "MPN/100mL")), c1))
+        popup_content <- paste0(
+          popup_content, 
+          table_row("FDEP E. coli Limit",
+                    paste(Ecoli_crit, ifelse(is.na(Ecoli_crit), "", "MPN/100mL")), 
+                    c1))
       } else if (Type == "TIDAL") {
-        popup_content <- paste0(popup_content, 
-                                table_row("FDEP Enterococci Limit", paste(Entero_crit, ifelse(is.na(Entero_crit), "", "MPN/100mL")), c2))
+        popup_content <- paste0(
+          popup_content, 
+          table_row("FDEP Enterococci Limit", 
+                    paste(Entero_crit, ifelse(is.na(Entero_crit), "", "MPN/100mL")), 
+                    c2))
       }
     }
   }
@@ -850,42 +866,58 @@ bioPlt <- function(x, bio){
   
   # Define background color shapes based on 'bio' input
   shapes <- if (bio == 'SCI') {
+    yr7 <- max(x$Date) - lubridate::years(7) - months(6)
+    
     list(
       list( # Red section (0-40)
         type = "rect",
-        x0 = min(x$Date)-150, x1 = max(x$Date)+100,
+        x0 = yr7, 
+        x1 = max(x$Date)+100,
         y0 = 0, y1 = 40,
         fillcolor = "rgba(255, 102, 102, 0.3)", 
         line = list(width = 0)
       ),
-      list( # Orange section (41-65)
-        type = "rect",
-        x0 = min(x$Date)-150, x1 = max(x$Date)+100,
-        y0 = 40, y1 = 65,
-        fillcolor = "rgba(255, 255, 153, 0.3)", 
-        line = list(width = 0)
-      ),
       list( # Green section (66-100)
         type = "rect",
-        x0 = min(x$Date)-150, x1 = max(x$Date)+100,
-        y0 = 65, y1 = 100,
+        x0 = yr7, 
+        x1 = max(x$Date)+100,
+        y0 = 40, y1 = 100,
         fillcolor = "rgba(144, 238, 144, 0.3)", 
+        line = list(width = 0)
+      ),
+      list(
+        type = 'line',
+        x0 = yr7, 
+        x1 = max(x$Date)+100,
+        y0 = 35, y1 = 35,
+        line = list(
+          dash = 'dash',
+          color = 'red',
+          width = 2
+        )
+      ),
+      list(
+        type = 'rect',
+        x0 = yr7 - lubridate::years(20),
+        x1 = yr7,
+        y0 = 0, y1 = 100,
+        fillcolor = "rgba(180, 180, 180, 0.3)",
         line = list(width = 0)
       )
     )
   } else {
     list(
-      list( # Light yellow section (0-42)
+      list( # Red section (0-40)
         type = "rect",
         x0 = min(x$Date)-150, x1 = max(x$Date)+100,
-        y0 = 0, y1 = 42,
-        fillcolor = "rgba(255, 255, 153, 0.3)", # Light Yellow
+        y0 = 0, y1 = 43,
+        fillcolor = "rgba(255, 102, 102, 0.3)", 
         line = list(width = 0)
       ),
       list( # Light green section (42-100)
         type = "rect",
         x0 = min(x$Date)-150, x1 = max(x$Date)+100,
-        y0 = 42, y1 = 100,
+        y0 = 43, y1 = 100,
         fillcolor = "rgba(144, 238, 144, 0.3)", # Light Green
         line = list(width = 0)
       )
@@ -894,7 +926,7 @@ bioPlt <- function(x, bio){
   
   # Create the plot
   plotly::plot_ly(
-    data = data.frame(x),
+    data = data.frame(x) |> tidyr::drop_na(Score),
     type = 'scatter',
     mode = 'markers+lines',
     x = ~Date,
@@ -904,9 +936,10 @@ bioPlt <- function(x, bio){
   ) |>
     plotly::layout(
       title = paste(ifelse(bio == 'SCI','Stream Condition Index (SCI)',
-                           'Lake Vegetative Index (LVI)'), "Score for", stringr::str_to_title(x$Segment[1])),
+                           'Lake Vegetative Index (LVI)'), "Score for", 
+                    stringr::str_to_title(x$Segment[1])),
       xaxis = list(
-        title = "Sample Date", 
+        title = "", 
         range = c(min(x$Date)-75,max(x$Date)+75),
         showgrid = FALSE,
         showline = TRUE,
@@ -922,74 +955,106 @@ bioPlt <- function(x, bio){
         linecolor = 'black',
         mirror = TRUE),
       
-      shapes = shapes 
+      shapes = shapes,
+      
+      hoverlabel = list(
+        bgcolor = 'lightgray',
+        font = list(color = 'green'))  # Color of text in box
     )
 }
 
 # Function to create table ob taxa abundance data:
-taxaTbl <- function(x, type){
+taxaTbl <- function(x, bio, type){
   
   
   if (type == 'counts'){
     
+    if (bio == 'SCI'){
     # Combine the data based on rep number and get total counts:
     dat <- dplyr::left_join(
       x |> dplyr::filter(Rep == 1),
       x |> dplyr::filter(Rep == 2) |> dplyr::select(Taxa, Abundance), 
       by ='Taxa'
-    ) |>
+      ) |>
       dplyr::select(-c(Site, Rep, Date)) |>
       dplyr::rename(`Alliquat 1` = Abundance.x,
                     `Alliquat 2` = Abundance.y) |>
       dplyr::rowwise() |>
-      dplyr::mutate(`Number of Individuals` = sum(c(`Alliquat 1`, `Alliquat 2`), na.rm = TRUE)) |>
+      dplyr::mutate(`Number of Individuals` = sum(c(`Alliquat 1`, `Alliquat 2`), na.rm = TRUE),
+                    Taxa = paste0("<i>", Taxa, "</i>")) |>
       dplyr::relocate(`Number of Individuals`, .before = `Alliquat 1`) |>
       dplyr::arrange(Taxa) |>
-      dplyr::mutate(across(everything(), ~replace(., is.na(.), ''))) 
+      dplyr::mutate(across(everything(), ~replace(., is.na(.), ''))) |>
+      dplyr::select(-WBID)
+    } else if (bio == 'LVI'){
+      dat <- x |>
+        tidyr::pivot_wider(names_from = 'Section', values_from = 'Status') |>
+        dplyr::select(-c(Site, Date, WBID)) |>
+        dplyr::mutate(Taxa = paste0("<i>", Taxa, "</i>")) |>
+        dplyr::mutate(across(everything(), ~replace(., is.na(.), ''))) |>
+        dplyr::arrange(Taxa) |>
+        dplyr::rename_with(~ paste('Section', .x), 2:last_col())
+    }
     
     # Generate a table of the taxa count:
     tbl <- plotly::plot_ly(
       type = 'table',
       header = list(
-        values = c("Taxa", "Number of Individuals", "Alliquat 1", "Alliquat 2"),
+        values = names(dat),
         align = c('left', rep('center', 3)),
         line = list(width = 1, color = 'black'),
-        fill = list(color = 'lightblue'),  # Light blue header
+        fill = list(color = 'lightblue'),
         font = list(size = 14)
       ),
       cells = list(
-        values = rbind(dat$Taxa, dat$`Number of Individuals`, dat$`Alliquat 1`, dat$`Alliquat 2`),
+        values = unname(as.list(dat)),
         align = c('left', rep('center',3)),
         line = list(color = 'black'),
-        fill = list(color = list(rep(c('white', '#f6f8fa'), length.out = nrow(dat)))),  # striped rows
+        fill = list(color = list(rep(c('white', '#f6f8fa'), length.out = nrow(dat)))),
         font = list(size = 12)
       )
-    )
+    ) |>
+      plotly::layout(
+        title = list(text = 
+                       dplyr::case_when(
+                         nrow(x) > 0 ~ paste0('<b>Taxa Count (', format(x$Date[1],"%m/%d/%Y"),')</b>'),
+                         TRUE ~ ""),
+                     font = list(size = 14),
+                     y = 0.985))
   }
   
   if (type == 'metrics'){
+    
+    dat <- x |>
+      dplyr::select(-c(Site, Date, WBID))
+    
     # Generate a table of the metrics:
     tbl <- plotly::plot_ly(
       type = 'table',
       header = list(
-        values = c("SCI Metric", "Raw Totals", "SCI SCores"),
+        values = names(dat),
         align = c('left', 'center'),
         line = list(width = 1, color = 'black'),
-        fill = list(color = 'lightblue'),  # Light blue header
+        fill = list(color = 'lightblue'),  
         font = list(size = 14)
       ),
       cells = list(
-        values = rbind(x$`SCI Metric`, x$`Raw Totals`, x$`SCI Scores`),
+        values = unname(as.list(dat)),
         align = c('left', 'center'),
         line = list(color = 'black'),
-        fill = list(color = list(rep(c('white', '#f6f8fa'), length.out = 6))),  # striped rows
+        fill = list(color = list(rep(c('white', '#f6f8fa'), length.out = 6))),  
         font = list(size = 12)
       )
-    )
+    ) |>
+      plotly::layout(
+        title = list(text = 
+                       dplyr::case_when(
+                         nrow(x) > 0 ~paste0('<b>',ifelse(bio == 'SCI','SCI','LVI'),
+                                             ' Metrics (', format(x$Date[1],'%m/%d/%Y'),')</b>'),
+                         TRUE ~ ""),
+                     font = list(size = 14),
+                     y = 0.985))
   }
   
   return(tbl)
-  
-  
 }
-
