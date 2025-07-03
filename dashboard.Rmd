@@ -1975,50 +1975,25 @@ fluidRow(
   )
 )
 
-# # Server logic to handle date updates with edge case handling
-# observe({
-#   current_date1 <- input$rdate
-#   
-#   # Update button states based on the selected date
-#   if (!is.null(current_date1)) {
-#     # Disable "Previous" if at the earliest date
-#     if (current_date1 <= min(rdate$Date)) {
-#       shinyjs::disable("prev_date1")
-#     } else {
-#       shinyjs::enable("prev_date1")
-#     }
-#     
-#     # Disable "Next" if at the latest date
-#     if (current_date1 >= max(rdate$Date)) {
-#       shinyjs::disable("next_date1")
-#     } else {
-#       shinyjs::enable("next_date1")
-#     }
-#   }
-# })
-
 # Update date picker to the previous date in the dataset.
 observeEvent(input$prev_date1, {
-  current_date1 <- as.Date(input$rdate)
-  prev_date1 <- max(rdate$Date[rdate$Date < current_date1], na.rm = TRUE)
+  prev_date1 <- max(rdate$Date[rdate$Date < as.Date(input$rdate)], na.rm = TRUE)
 
   # Check if prev_date is valid before updating
-  if (!is.infinite(prev_date1) && !is.na(prev_date1)) {
+  if (!is.infinite(prev_date1) & !is.na(prev_date1)) {
     shinyWidgets::updateAirDateInput(session, "rdate", value = prev_date1)
   }
 })
 
 # Update date picker to the next date in the dataset
 observeEvent(input$next_date1, {
-  current_date1 <- as.Date(input$rdate)
-  next_date1 <- min(rdate$Date[rdate$Date > current_date1], na.rm = TRUE)
+  next_date1 <- min(rdate$Date[rdate$Date > as.Date(input$rdate)], na.rm = TRUE)
 
   # Check if next_date is valid before updating
-  if (!is.infinite(next_date1) && !is.na(next_date1)) {
+  if (!is.infinite(next_date1) & !is.na(next_date1)) {
     shinyWidgets::updateAirDateInput(session, "rdate", value = next_date1)
   }
 })
-
 
 # Red tide legend:
 rtLeg <- leg(
@@ -2029,7 +2004,7 @@ rtLeg <- leg(
   h = 10, 
   w = 15)
 
-
+# Make red tide map
 rtm <- reactive({
   
   # Filter data based on selected date
@@ -2110,8 +2085,11 @@ bdate <- dat |>
   unique()
 
 # Create a sequence of dates not in the dataset for the date picker:
-bd <- seq.Date(bdate$Date[1], bdate$Date[length(bdate$Date)], by = 'day')
-bd <- bd[! bd %in% bdate$Date]
+bd <- data.frame(
+  Date = seq.Date(bdate$Date[1], bdate$Date[length(bdate$Date)], by = 'day')
+  ) |>
+  dplyr::filter(! Date %in% bdate$Date) |>
+  dplyr::pull(Date)
 
 # UI for date input and buttons
 shinyjs::useShinyjs()  # Enable shinyjs
@@ -2144,46 +2122,22 @@ fluidRow(
   )
 )
 
-# Server logic to handle date updates with edge case handling
-observe({
-  current_date <- input$bdate
-  
-  # Update button states based on the selected date
-  if (!is.null(current_date)) {
-    # Disable "Previous" if at the earliest date
-    if (current_date <= min(bdate$Date)) {
-      shinyjs::disable("prev_date")
-    } else {
-      shinyjs::enable("prev_date")
-    }
-    
-    # Disable "Next" if at the latest date
-    if (current_date >= max(bdate$Date)) {
-      shinyjs::disable("next_date")
-    } else {
-      shinyjs::enable("next_date")
-    }
-  }
-})
-
 # Update date picker to the previous date in the dataset
 observeEvent(input$prev_date, {
-  current_date <- as.Date(input$bdate)
-  prev_date <- max(bdate$Date[bdate$Date < current_date], na.rm = TRUE)
+  prev_date <- max(bdate$Date[bdate$Date < as.Date(input$bdate)], na.rm = TRUE)
   
   # Check if prev_date is valid before updating
-  if (!is.infinite(prev_date) && !is.na(prev_date)) {
+  if (!is.infinite(prev_date) & !is.na(prev_date)) {
     shinyWidgets::updateAirDateInput(session, "bdate", value = prev_date)
   }
 })
 
 # Update date picker to the next date in the dataset
 observeEvent(input$next_date, {
-  current_date <- as.Date(input$bdate)
-  next_date <- min(bdate$Date[bdate$Date > current_date], na.rm = TRUE)
+  next_date <- min(bdate$Date[bdate$Date > as.Date(input$bdate)], na.rm = TRUE)
   
   # Check if next_date is valid before updating
-  if (!is.infinite(next_date) && !is.na(next_date)) {
+  if (!is.infinite(next_date) & !is.na(next_date)) {
     shinyWidgets::updateAirDateInput(session, "bdate", value = next_date)
   }
 })
@@ -2258,7 +2212,6 @@ output$bmap <- leaflet::renderLeaflet(bm())
 # Display the bacteria map:
 fillCol(flex = 0.9,
         leaflet::leafletOutput('bmap'))
-
 ```
 
 
@@ -2269,7 +2222,11 @@ Annual Report
 
 ### BACKGROUND
 
-This report is the most recent annual water quality prepared by the Pinellas County Division of Environmental Managemnet and describes sampling methodology, data trends, water quality summary statistics, and biological monitoring results. For more information about this report or to request previous years' reports, please contact Stacey Day (sday@pinellas.gov).
+This report is the most recent annual water quality prepared by the Pinellas County 
+Division of Environmental Management and describes sampling methodology, data 
+trends, water quality summary statistics, and biological monitoring results. For 
+more information about this report or to request previous years' reports, please
+contact Stacey Day (sday@pinellas.gov).
 
 
 ## Column {.tabset .tabset-fade data-width="640"}
@@ -2298,7 +2255,6 @@ datWB <- reactive({
   dat <- wqInit |>
            dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()])
   return(dat)
-  
   })
 
 # Create a reactive table:
