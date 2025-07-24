@@ -33,7 +33,7 @@ source('R/funcs.R')
 ```{r data handling, include=FALSE}
 
 # Water quality data path:
-wqPath <- 'Data/Pinellas_County_Water_Quality_Data_2003_2025.xlsx'
+wqPath <- 'data/Pinellas_County_Water_Quality_Data_2003_2025.xlsx'
 
 # Import water quality data:
 wqInit <- readxl::read_excel(wqPath, guess_max = 50000) |>
@@ -48,7 +48,7 @@ wqIn <- wqInit |>
 # match FDEP WBID names due to Pinellas County monitoring program specifics. For 
 # example, Lake Seminole is FDEP WBID 1618 but is split into 1618_N and 1618_S
 # since the north and south lobes of the lake are sampled separately:
-wCrit <- readxl::read_excel('Data/WBID_criteria.xlsx', sheet = 'Criteria')
+wCrit <- readxl::read_excel('data/WBID_criteria.xlsx', sheet = 'Criteria')
 
 # Calculate means for parameters and keep only surface level data (those are the 
 # data used to generate plots in the dashboard):
@@ -711,10 +711,10 @@ long-term water quality trends, and summary statistics click on the "Annual Repo
 ```{r}
 # Display the data for DO, chl_a, TN, and TP
 fillCol(flex = c(1, rep(1, 4)),
-        pltmsg(getData, "DO", DOplo),
-        pltmsg(getData, "chl_a", chlplo),
-        pltmsg(getData, "TN", TNplo),
-        pltmsg(getData, "TP", TPplo))
+        pltMsg(getData, "DO", DOplo),
+        pltMsg(getData, "chl_a", chlplo),
+        pltMsg(getData, "TN", TNplo),
+        pltMsg(getData, "TP", TPplo))
 ```
 
 ### Water Clarity
@@ -723,9 +723,9 @@ fillCol(flex = c(1, rep(1, 4)),
 # Display the data for TSS, turbidity, and Secchi. Secchi not collected on stream 
 # sites, only lakes and coastal water:
 fillCol(flex = c(1, rep(1, 3)),
-    pltmsg(getData, "TSS", TSSplo),
-    pltmsg(getData, "Turbidity", NTUplo),
-    pltmsg(getData, "Secchi", Secplo))
+    pltMsg(getData, "TSS", TSSplo),
+    pltMsg(getData, "Turbidity", NTUplo),
+    pltMsg(getData, "Secchi", Secplo))
 ```
 
 ### Temperature & Salinity
@@ -733,8 +733,8 @@ fillCol(flex = c(1, rep(1, 3)),
 ```{r}
 # Display the data for temperature and salinity:
 fillCol(flex = c(1, rep(1, 3)),
-    pltmsg(getData, "Temp", Tplo),
-    pltmsg(getData, "Salinity", Splo))
+    pltMsg(getData, "Temp", Tplo),
+    pltMsg(getData, "Salinity", Splo))
 ```
 
 ### Bacteria
@@ -742,8 +742,8 @@ fillCol(flex = c(1, rep(1, 3)),
 ```{r}
 # Bacteria samples only collected in freshwater and tidal stream sites:
 fillCol(flex = c(1, rep(1, 2)),
-    pltmsg(getData, "Ecoli", eplo),
-    pltmsg(getData, "Entero", entplo))
+    pltMsg(getData, "Ecoli", eplo),
+    pltMsg(getData, "Entero", entplo))
 ```
 
 ### Report Card
@@ -1461,7 +1461,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!-- # SCI-------------------------------------------------------------------------- -->
 
 <!-- # Read in the SCI score data and get averages: -->
-<!-- sci <- readxl::read_excel('Data/Pinellas_SCI_old.xlsx', sheet = 'SCI Scores') |> -->
+<!-- sci <- readxl::read_excel('data/Pinellas_SCI_old.xlsx', sheet = 'SCI Scores') |> -->
 <!--   dplyr::mutate(Date = as.Date(Date), -->
 <!--                 Bio = 'SCI', -->
 <!--                 Score = SCI) |> -->
@@ -1470,7 +1470,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--   dplyr::ungroup() -->
 
 <!-- # Read in the SCI taxa abundance data: -->
-<!-- sciTaxa <- readxl::read_excel('Data/Pinellas_SCI.xlsx', sheet = 'Taxa') |> -->
+<!-- sciTaxa <- readxl::read_excel('data/Pinellas_SCI.xlsx', sheet = 'Taxa') |> -->
 <!--   dplyr::mutate(Date = as.Date(Date)) |> -->
 <!--   dplyr::left_join( -->
 <!--     sci |> dplyr::select(Segment, WBID) |> dplyr::distinct(), -->
@@ -1478,7 +1478,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--     ) -->
 
 <!-- # Read in the SCI metric data: -->
-<!-- sciMet <- readxl::read_excel('Data/Pinellas_SCI.xlsx', sheet = 'Metrics') |> -->
+<!-- sciMet <- readxl::read_excel('data/Pinellas_SCI.xlsx', sheet = 'Metrics') |> -->
 <!--   dplyr::mutate(Date = as.Date(Date)) |> -->
 <!--   dplyr::left_join( -->
 <!--     sci |> dplyr::select(Segment, WBID) |> dplyr::distinct(), -->
@@ -1495,7 +1495,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!-- # LVI ------------------------------------------------------------------------- -->
 
 <!-- # Read in the LVI data: -->
-<!-- lvi <- readxl::read_excel('Data/Pinellas_LVI.xlsx') |> -->
+<!-- lvi <- readxl::read_excel('data/Pinellas_LVI.xlsx') |> -->
 <!--   dplyr::mutate(Date = as.Date(Date), -->
 <!--                 Bio = 'LVI') |> -->
 <!--   dplyr::rename(Score = `LVI Score`) |> -->
@@ -1505,7 +1505,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--   dplyr::ungroup() -->
 
 <!-- # Read in the LVI taxa abundance data: -->
-<!-- lviTaxa <- readxl::read_excel('Data/Pinellas_LVI.xlsx', sheet = 'Taxa') |> -->
+<!-- lviTaxa <- readxl::read_excel('data/Pinellas_LVI.xlsx', sheet = 'Taxa') |> -->
 <!--   dplyr::mutate(Date = as.Date(Date)) |> -->
 <!--   dplyr::left_join( -->
 <!--     lvi |> dplyr::select(Segment, WBID) |> dplyr::distinct(), -->
@@ -1513,7 +1513,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--     ) -->
 
 <!-- # Read in the LVI metric data: -->
-<!-- lviMet <- readxl::read_excel('Data/Pinellas_LVI.xlsx', sheet = 'Metrics') |> -->
+<!-- lviMet <- readxl::read_excel('data/Pinellas_LVI.xlsx', sheet = 'Metrics') |> -->
 <!--   dplyr::mutate(Date = as.Date(Date)) |> -->
 <!--   tidyr::pivot_wider( -->
 <!--     names_from = Section, -->
@@ -1905,7 +1905,7 @@ knitr::include_graphics('www/entero.png')
 
 ```{r}
 # Read in red tide and entero data and set limits for color coding:
-dat <- readxl::read_excel('Data/Pinellas_RedTide_Entero.xlsx', guess_max = 50000) |>
+dat <- readxl::read_excel('data/Pinellas_RedTide_Entero.xlsx', guess_max = 50000) |>
   dplyr::mutate(
     `Karenia brevis` = as.numeric(`Karenia brevis`),
     Enterococcus = as.numeric(Enterococcus),
@@ -2273,7 +2273,7 @@ tab <- reactive({
     return(out)
     })
 
-# Data download:
+# Full period-of-record data download button:
 output$datFull <- downloadHandler(
   filename = function(){wqPath},
   content = function(file){
@@ -2281,24 +2281,21 @@ output$datFull <- downloadHandler(
   }
 )
 
+# Download handler for selected site data. The sheets need to be added to the file
+# or else only the data will be downloaded and not the units and qualifiers:
 output$datSel <- downloadHandler(
   filename = function(){paste0('Pinellas_County_',site(),'_Water_Quality_Data.xlsx')},
   content = function(file){
-    
     units <- readxl::read_excel(wqPath, sheet = 'Units')
     quals <- readxl::read_excel(wqPath, sheet = 'Qualifier Codes')
-    
     sheets <- list('Water Quality Data' = datWB(), 'Units' = units, 'Qualifiers' = quals)
-    
     openxlsx::write.xlsx(sheets, file)
   }
 )
 
-
+# Display the table and download buttons:
 fillCol(
   flex = c(0.07, 1),
-
-  # Row for download buttons (side by side)
   fluidRow(
     column(6, shinyWidgets::downloadBttn('datSel', 'Download Selected Site Data',
                                      style = 'simple', block = TRUE, color = 'success')),
@@ -2306,11 +2303,8 @@ fillCol(
                           round(file.size(wqPath)/(1024^2),1),' Mb)'),
                                          style = 'simple', block = TRUE, color = 'success'))
   ),
-
-  # Reactable table remains unchanged
   reactable::renderReactable(tab())
 )
-
 
 ```
 
@@ -2319,7 +2313,7 @@ fillCol(
 ```{r}
 # Get data for download
 RTwb <- reactive({
-  dat <- dat <- readxl::read_excel('Data/Pinellas_RedTide_Entero.xlsx', guess_max = 50000) |>
+  dat <- dat <- readxl::read_excel('data/Pinellas_RedTide_Entero.xlsx', guess_max = 50000) |>
     dplyr::mutate(Date = as.Date(Date))
   return(dat)
   
@@ -2343,16 +2337,16 @@ RTtab <- reactive({
 
 # Data download:
 output$datRTFull <- downloadHandler(
-  filename = function(){'Data/Pinellas_RedTide_Entero.xlsx'},
+  filename = function(){'data/Pinellas_RedTide_Entero.xlsx'},
   content = function(file){
-    file.copy('Data/Pinellas_RedTide_Entero.xlsx',file)
+    file.copy('data/Pinellas_RedTide_Entero.xlsx',file)
   }
 )
 
 
 fillCol(flex = c(0.07, 1),
  shinyWidgets::downloadBttn('datRTFull', paste0('Download Red Tide/Bacteria Data (',
-                          round(file.size('Data/Pinellas_RedTide_Entero.xlsx')/(1024^2),1),' Mb)'),
+                          round(file.size('data/Pinellas_RedTide_Entero.xlsx')/(1024^2),1),' Mb)'),
                                          style = 'simple', block = TRUE, color = 'success'),
 
   # Reactable table remains unchanged
