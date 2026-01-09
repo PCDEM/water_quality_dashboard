@@ -35,7 +35,6 @@ h1,h2,h3,h4,h5 {
   background-image: none !important;
 }
 
-
 /* Set font color of tabs to blue */
 .nav-tabs-custom > .nav-tabs > li > a {
   color: black;
@@ -44,7 +43,6 @@ h1,h2,h3,h4,h5 {
   border-radius: 0;
   padding: 3px 10px 5px;
 }
-
 
 /* Set font color of active tab to green */
 .nav-tabs-custom .nav-tabs > li.active > a {
@@ -55,8 +53,6 @@ h1,h2,h3,h4,h5 {
   padding: 3px 10px 5px;
 } 
 
-
-
 /* water quality gauge */
 body .html-widget.gauge svg {
   height: 150px;
@@ -64,7 +60,6 @@ body .html-widget.gauge svg {
   margin-bottom: -10px;
   overflow: visible !important;
 }
-
 
 /* Additional styling for positioning the info button on the map */
 .btn {
@@ -90,7 +85,6 @@ body .html-widget.gauge svg {
   background-color: lightblue;
 }
 
-
 .leaflet-top, .leaflet-bottom {
     z-index: unset !important;
 }
@@ -98,7 +92,6 @@ body .html-widget.gauge svg {
 .leaflet-touch .leaflet-control-layers, .leaflet-touch .leaflet-bar {
     z-index: 2 !important;
 }
-
 
 .irs--shiny .irs-bar {
   background-color: #00244c;
@@ -119,7 +112,6 @@ body .html-widget.gauge svg {
   color: black;
 }
 
-
 .modal-footer {
   position: relative; /* Ensure the footer itself is positioned */
 }
@@ -138,5 +130,3 @@ body .html-widget.gauge svg {
 .modal-footer .btn:hover {
   background-color: #d32f2f; /* Optional: hover effect */
 }
-
-

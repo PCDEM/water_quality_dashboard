@@ -746,7 +746,7 @@ gauge <- function(data, var, unit, max, round, g1, g2, r1, r2, width){
   }
 
 # check data availability for plot or retrun message:
-pltmsg <- function(dataFunc, colName, plotFunc) {
+pltMsg <- function(dataFunc, colName, plotFunc) {
   renderUI({
     if (length(which(!is.na(dataFunc()[[colName]]))) < 5) {
       h3("PARAMETER NOT COLLECTED AT THIS SITE", 
@@ -926,13 +926,13 @@ bioPlt <- function(x, bio){
   
   # Create the plot
   plotly::plot_ly(
-    data = data.frame(x) |> tidyr::drop_na(Score),
+    data = data.frame(x) |> tidyr::drop_na(SCI),
     type = 'scatter',
     mode = 'markers+lines',
     x = ~Date,
-    y = ~Score,
+    y = ~SCI,
     hoverinfo = 'text',
-    text = ~paste(ifelse(bio == 'SCI','SCI: ','LVI: '), Score, '<br>Date: ', Date)
+    text = ~paste(ifelse(bio == 'SCI','SCI: ','LVI: '), SCI, '<br>Date: ', Date)
   ) |>
     plotly::layout(
       title = paste(ifelse(bio == 'SCI','Stream Condition Index (SCI)',
@@ -963,7 +963,7 @@ bioPlt <- function(x, bio){
     )
 }
 
-# Function to create table ob taxa abundance data:
+# Function to create table for taxa abundance data:
 taxaTbl <- function(x, bio, type){
   
   

@@ -16,6 +16,13 @@ resource_files:
 - GIS/Waterbody_IDs_(WBIDs).sbn
 - GIS/Waterbody_IDs_(WBIDs).sbx
 - GIS/Waterbody_IDs_(WBIDs).shx
+- GIS/staceywbid.shp.xml
+- GIS/staceywbid.cpg
+- GIS/staceywbid.dbf
+- GIS/staceywbid.prj
+- GIS/staceywbid.sbn
+- GIS/staceywbid.sbx
+- GIS/staceywbid.shx
 ---
 
 
@@ -33,7 +40,7 @@ source('R/funcs.R')
 ```{r data handling, include=FALSE}
 
 # Water quality data path:
-wqPath <- 'data/Pinellas_County_Water_Quality_Data_2003_2025.xlsx'
+wqPath <- 'data/pinellas_wq_2003_2025.xlsx'
 
 # Import water quality data:
 wqInit <- readxl::read_excel(wqPath, guess_max = 50000) |>
@@ -109,6 +116,22 @@ wqShp <- sf::st_read('GIS/Waterbody_IDs_(WBIDs).shp') |>
       dplyr::distinct(), 
     by = 'WBID'
     )
+
+# Read in stream shapefile
+streamShp <- sf::st_read('GIS/staceywbid.shp') |>
+  sf::st_transform("+proj=longlat +ellps=WGS84 +datum=WGS84") |>
+  dplyr::filter(
+  BASIN_1 %in% c('ANCLOTE RIVER', 'KLOSTERMAN BAYOU RUN', 'CURLEW CREEK',
+                 'STEVENSON CREEK', 'LAKE TARPON CANAL', 'MOCCASIN CREEK',
+                 'BISHOP CREEK', 'MULLET CREEK', 'ALLIGATOR CREEK', 'ALLEN CREEK',
+                 'LAKE SEMINOLE OUTLET', 'MCKAY CREEK', 'LONG BRANCH',
+                 'CROSS CANAL (NORTH)', 'CROSS CANAL (SOUTH)', 'CHURCH CREEK',
+                 'PINELLAS PARK DITCH', 'BONN CREEK', 'PASADENA LAKE OUTLET',
+                 'BEAR CREEK', 'BOOKER CREEK', 'CLAM BAYOU DRAIN',
+                 '77TH AVE CANAL', 'CEDAR CREEK', 'SUTHERLAND BAYOU',
+                 'COW BRANCH', 'BELLEAIR GOLFCLUB RUN')
+) 
+
 
 ```
 
@@ -220,6 +243,15 @@ m <- m |>
                                 font-weight: bold;'),
     position = 'bottomleft'
     ) 
+# |>
+#   leaflet::addPolylines(
+#     data = streamShp,
+#     weight = 0.8,
+#     color = 'blue'
+#     )
+
+
+
 ```
 
 ```{r get data and plots, include=FALSE}
@@ -241,7 +273,7 @@ getData <- reactive({
       Date, DO, chl_a, TN, TP, TSS, Turbidity, Secchi, Temp, Salinity, Ecoli, Entero
       )
     )
-  return(data)
+    return(data)
   })
 
 mapplo <- leaflet::leafletProxy('mapplo') 
@@ -268,7 +300,13 @@ observeEvent(input$mapplo_shape_click, {
       fill      = TRUE,
       fillColor = ~color,
       label     = ~ID
-      )
+      ) 
+  # |>
+  # leaflet::addPolylines(
+  #   data = streamShp,
+  #   weight = 0.8,
+  #   color = 'blue'
+  #   )
   })
 
 # Get the name of the WBID clicked by the user:
@@ -583,7 +621,7 @@ nsModal <- modalDialog(
 
 # Display a special message for WBIDs in St. Petersburg:
 observeEvent(input$mapplo_shape_click, {
-  if (site() %in% c('SMACKS BAYOU', 'TAMPA BAY (UPPER SEGMENT)', 'TAMPA BAY (MIDDLE SEGMENT)',
+  if (site() %in% c('SMACKS BAYOU', 'TAMPA BAY (UPPER SEGMENT)', 'TAMPA BAY (MIDDLE SEGMENT)', 'BEAR CREEK',
                     'BOOKER CREEK', 'COFFEEPOT BAYOU', '34TH STREET BASIN',
                     'FRENCHMANS CREEK - BASIN U', 'BAYOU CREEK')) {
     showModal(nsModal)
@@ -732,7 +770,7 @@ fillCol(flex = c(1, rep(1, 3)),
 
 ```{r}
 # Display the data for temperature and salinity:
-fillCol(flex = c(1, rep(1, 3)),
+fillCol(flex = c(1, rep(1, 2)),
     pltMsg(getData, "Temp", Tplo),
     pltMsg(getData, "Salinity", Splo))
 ```
@@ -1431,15 +1469,15 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!-- average length of algae, if present. If less than 25% of the algae is longer than -->
 <!-- 6 mm, flora is considered balanced. -->
 
-<!-- #### LVS -->
+<!-- <!-- #### LVS --> -->
 
-<!-- The Linear Vegetation Survey (LVS) for flowing streams documents the plant -->
-<!-- community in the measured stream reach. The average sensitivity, measured by the -->
-<!-- Coefficient of Conservatism (COC), of the plant community is calculated based on -->
-<!-- species tolerance to environmental changes. If the average sensitivity is -->
-<!-- greater than or equal to 2.5, the plant community is in balance. The percentage of -->
-<!-- invasive exotics is also noted, with a balanced plant community being less than -->
-<!-- 25% of the plants being invasive. -->
+<!-- <!-- The Linear Vegetation Survey (LVS) for flowing streams documents the plant --> -->
+<!-- <!-- community in the measured stream reach. The average sensitivity, measured by the --> -->
+<!-- <!-- Coefficient of Conservatism (COC), of the plant community is calculated based on --> -->
+<!-- <!-- species tolerance to environmental changes. If the average sensitivity is --> -->
+<!-- <!-- greater than or equal to 2.5, the plant community is in balance. The percentage of --> -->
+<!-- <!-- invasive exotics is also noted, with a balanced plant community being less than --> -->
+<!-- <!-- 25% of the plants being invasive. --> -->
 
 <!-- #### LVI -->
 
@@ -1461,12 +1499,14 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!-- # SCI-------------------------------------------------------------------------- -->
 
 <!-- # Read in the SCI score data and get averages: -->
-<!-- sci <- readxl::read_excel('data/Pinellas_SCI_old.xlsx', sheet = 'SCI Scores') |> -->
+<!-- sci <- readxl::read_excel('data/Pinellas_SCI.xlsx', sheet = 'SCI Scores') |> -->
 <!--   dplyr::mutate(Date = as.Date(Date), -->
 <!--                 Bio = 'SCI', -->
-<!--                 Score = SCI) |> -->
+<!--                 SCI = `SCI Score`, -->
+<!--                 HA = `Habitat Score`, -->
+<!--                 RPS = `Average RPA`) |> -->
 <!--   dplyr::group_by(Segment, WBID, Date, Bio) |> -->
-<!--   dplyr::summarise(dplyr::across(c(Score, SCI, HA, RPS, LVS), meanNA)) |> -->
+<!--   dplyr::summarise(dplyr::across(c(SCI, HA, RPS), meanNA)) |> -->
 <!--   dplyr::ungroup() -->
 
 <!-- # Read in the SCI taxa abundance data: -->
@@ -1527,7 +1567,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 
 <!-- # Combine the SCI and LVI data for ease of reading based on user click: -->
 <!-- bioData <- dplyr::bind_rows(sci,lvi) |> -->
-<!--   dplyr::mutate_at(c('Score','SCI','HA','RPS','LVS'), function(x) ifelse(is.nan(x), NA, x)) -->
+<!--   dplyr::mutate_at(c('Score','SCI','HA','RPS'), function(x) ifelse(is.nan(x), NA, x)) -->
 
 
 <!-- # Get data for each WBID based on user click: -->
@@ -1583,7 +1623,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--   } -->
 <!--   return( -->
 <!--     taxaTbl( -->
-<!--       x = dat, -->
+<!--       x = dat |> dplyr::select(where(~ !all(is.na(.)))), -->
 <!--       bio = ifelse(getBio()$bio$Bio[1] == 'SCI', 'SCI', 'LVI'), -->
 <!--       type = 'metrics' -->
 <!--       ) -->
@@ -1758,39 +1798,39 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!-- }) -->
 
 
-<!-- output$lvsScore <- renderUI({ -->
-
-<!--   score <- getBio()$bio |> -->
-<!--     dplyr::filter(Date == input$sample_date) |> -->
-<!--     dplyr::pull(LVS) -->
-<!--   scoreInfo <- paste0('Linear Vegetation Survey (LVS) Score (', -->
-<!--                       format(as.Date(input$sample_date), "%m/%d/%Y"), ')') -->
-
-<!--   status <- dplyr::case_when( -->
-<!--     score < 25  ~ "IMPAIRED", -->
-<!--     score >= 25 ~ "HEALTHY" -->
-<!--   ) -->
-
-<!--   htmltools::div( -->
-<!--     style = "text-align: center; -->
-<!--              padding: 10px 10px; -->
-<!--              margin: 0px 0px; -->
-<!--              border: 2px solid #ccc; -->
-<!--              border-radius: 10px; -->
-<!--              background-color: #f5faff; -->
-<!--              font-family: sans-serif; -->
-<!--              width: 100%;", -->
-<!--     htmltools::tags$h3(scoreInfo, style = "margin: 0; padding-bottom: 5px; color: #555;"), -->
-<!--     htmltools::tags$h1(score, style = "margin: 0; font-size: 40px; color: #2c3e50;"), -->
-<!--     htmltools::tags$h2(status, style = paste0( -->
-<!--       "margin: 5px 0 0 0; font-weight: bold; color: ", -->
-<!--       dplyr::case_when( -->
-<!--         status == "IMPAIRED" ~ "#e74c3c", -->
-<!--         status == "HEALTHY" ~ "#2ecc71" -->
-<!--       ) -->
-<!--     )) -->
-<!--   ) -->
-<!-- }) -->
+<!-- # output$lvsScore <- renderUI({ -->
+<!-- #  -->
+<!-- #   score <- getBio()$bio |> -->
+<!-- #     dplyr::filter(Date == input$sample_date) |> -->
+<!-- #     dplyr::pull(LVS) -->
+<!-- #   scoreInfo <- paste0('Linear Vegetation Survey (LVS) Score (', -->
+<!-- #                       format(as.Date(input$sample_date), "%m/%d/%Y"), ')') -->
+<!-- #  -->
+<!-- #   status <- dplyr::case_when( -->
+<!-- #     score < 25  ~ "IMPAIRED", -->
+<!-- #     score >= 25 ~ "HEALTHY" -->
+<!-- #   ) -->
+<!-- #  -->
+<!-- #   htmltools::div( -->
+<!-- #     style = "text-align: center; -->
+<!-- #              padding: 10px 10px; -->
+<!-- #              margin: 0px 0px; -->
+<!-- #              border: 2px solid #ccc; -->
+<!-- #              border-radius: 10px; -->
+<!-- #              background-color: #f5faff; -->
+<!-- #              font-family: sans-serif; -->
+<!-- #              width: 100%;", -->
+<!-- #     htmltools::tags$h3(scoreInfo, style = "margin: 0; padding-bottom: 5px; color: #555;"), -->
+<!-- #     htmltools::tags$h1(score, style = "margin: 0; font-size: 40px; color: #2c3e50;"), -->
+<!-- #     htmltools::tags$h2(status, style = paste0( -->
+<!-- #       "margin: 5px 0 0 0; font-weight: bold; color: ", -->
+<!-- #       dplyr::case_when( -->
+<!-- #         status == "IMPAIRED" ~ "#e74c3c", -->
+<!-- #         status == "HEALTHY" ~ "#2ecc71" -->
+<!-- #       ) -->
+<!-- #     )) -->
+<!-- #   ) -->
+<!-- # }) -->
 
 <!-- # Input date selector for taxa and metric tables: -->
 <!-- observeEvent(getBio(), { -->
@@ -1816,12 +1856,12 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--       flex = c(1,1), -->
 <!--       fillRow( -->
 <!--         flex = c(1,1), -->
-<!--               uiOutput('meanScore'), -->
-<!--               uiOutput('haScore') -->
+<!--               uiOutput('haScore'), -->
+<!--               uiOutput('rpsScore') -->
 <!--       ), -->
 <!--       fillRow(flex = c(1,1), -->
-<!--               uiOutput('lvsScore'), -->
-<!--               uiOutput('rpsScore') -->
+<!--               # uiOutput('lvsScore'), -->
+<!--               uiOutput('meanScore') -->
 <!--       ) -->
 <!--     ) -->
 <!--   } -->
@@ -1840,7 +1880,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--                 fillCol(flex = c(0.2,0.95), -->
 <!--                         div( -->
 <!--                           style = "font-size: 14px", -->
-<!--                           selectInput('sample_date', 'Select Date to View Sample Taxa and Metrics:', -->
+<!--                           selectInput('sample_date', 'Select date to view sample taxa and metrics:', -->
 <!--                                     choices = NULL) -->
 <!--                           ), -->
 <!--                         plotly::renderPlotly(metT())), -->
