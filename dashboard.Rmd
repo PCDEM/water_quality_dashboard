@@ -16,7 +16,7 @@ resource_files:
 - GIS/Waterbody_IDs_(WBIDs).sbn
 - GIS/Waterbody_IDs_(WBIDs).sbx
 - GIS/Waterbody_IDs_(WBIDs).shx
-- GIS/staceywbid.shp.xml
+- GIS/staceywbid.shp
 - GIS/staceywbid.cpg
 - GIS/staceywbid.dbf
 - GIS/staceywbid.prj
@@ -50,6 +50,83 @@ wqInit <- readxl::read_excel(wqPath, guess_max = 50000) |>
 # secchi depth:
 wqIn <- wqInit |>
   dplyr::mutate(Secchi = ifelse(Secchi_q %in% c('VOB', 'S'), NA, Secchi)) 
+
+
+# Read in City of St. Petersburg water quality data:
+# cospRaw <- readxl::read_excel('data/cosp_data.xlsx', sheet = 'SWAMP')
+# 
+# # Reformat SP data to match PC data:
+# cospWQ <- cospRaw |>
+#   dplyr::filter(Analysis != 'Color (True)') |>
+#   dplyr::select(Site = SampleName,
+#          Latitude,
+#          Longitude,
+#          Date = Sampled,
+#          Analyte,
+#          Result) |>
+#   dplyr::filter(Analyte %in% c('Chlorophyll-a', 'Enterococci', 'Dissolved Oxygen',
+#                         'Dissolved Oxygen Saturation', 'pH', 'Salinity',
+#                         'Turbidity', 'Temperature', 'Nitrate+Nitrite-N',
+#                         'Total Nitrogen', 'Orthophosphate as P', 'Total Phosphorous',
+#                         'Total Kjeldahl Nitrogen', 'TSS', 'Secchi Disk', 'E. Coli'),
+#                 substr(Site,1,11) != 'Field Blank') |>
+#   dplyr::mutate(Date = substr(Date, 1,9),
+#          Date = as.Date(substr(Date,1,9), format = '%d-%b-%y'),
+#          Site = ifelse(substr(Site,1,6) %in% c('COSPE6','COSPE7'),substr(Site,5,8),
+#                        Site)) |>
+#   dplyr::distinct() |>
+#   tidyr::pivot_wider(id_cols = c(Site, Latitude, Longitude, Date),
+#               names_from = Analyte, values_from = Result) |>
+#   dplyr::arrange(Site,Date) |>
+#   dplyr::rename(`DO%` = 'Dissolved Oxygen Saturation',
+#          Temp_Water = Temperature,
+#          Secchi = 'Secchi Disk',
+#          NOX = 'Nitrate+Nitrite-N',
+#          TP = 'Total Phosphorous',
+#          TKN = 'Total Kjeldahl Nitrogen',
+#          OP = 'Orthophosphate as P',
+#          E_coli = 'E. Coli',
+#          DO = 'Dissolved Oxygen',
+#          `Chl-a` = 'Chlorophyll-a') |>
+#   dplyr::mutate_at(c('Latitude', 'Longitude', 'DO', 'DO%', 'Salinity', 'Secchi',
+#               'Turbidity','Temp_Water', 'NOX', 'TKN', 'OP','TP','TSS','E_coli',
+#               'Enterococci','pH', 'Chl-a'), as.numeric) |>
+#   dplyr::mutate(TN = TKN + NOX)
+# 
+# SPwbid <- readxl::read_excel('data/cosp_WBID.xlsx') |>
+#   dplyr::select(Site = SampleName, WBID, Segment = WATERBODY_NAME, Type = WATER_TYPE) |>
+#   dplyr::mutate(bact =
+#            dplyr::case_when(
+#              Site == '32-03' ~ 'Entero',
+#              Site == '39-02' ~ 'Ecoli',
+#              Site == '40-02' ~ 'Ecoli',
+#              Site == '44-02' ~ 'Entero',
+#              Site == '45-03' ~ 'Ecoli',
+#              Site == '46-03' ~ 'Ecoli',
+#              Site == '48-03' ~ 'Entero',
+#              Site == '51-02' ~ 'Ecoli',
+#              Site == 'BC-01' ~ 'Entero',
+#              Site == 'BC-01 27th Ave N' ~ 'Entero',
+#              Site == 'GC-01' ~ 'FRESHWATER',
+#              TRUE ~ NA
+#            ),
+#          Type =
+#            dplyr::case_when(
+#              Type == 'ESTUARY' ~ 'MARINE',
+#              Type == 'STREAM' & bact == 'Entero' ~ 'TIDAL',
+#              Type == 'STREAM' & bact == 'Ecoli' ~ 'FRESHWATER',
+#              TRUE ~ Type
+#            )) |>
+#   dplyr::select(-bact)
+# 
+# cospW <- cospWQ |>
+#   dplyr::left_join(SPwbid, by = 'Site') |>
+#   dplyr::relocate(WBID, Segment, Type, .after = Site) |>
+#   dplyr::mutate(Level = 'Surface')
+# 
+# 
+# wqIn <- dplyr::bind_rows(wqIn, cospW) |>
+#   dplyr::mutate(Type = ifelse(WBID == '1716A', 'TIDAL', Type))
 
 # Import FDEP WBID water quality thresholds (some of the WBID names may not exactly
 # match FDEP WBID names due to Pinellas County monitoring program specifics. For 
@@ -88,9 +165,12 @@ wqShp <- sf::st_read('GIS/Waterbody_IDs_(WBIDs).shp') |>
     geometry = sf::st_make_valid(geometry),
     Type = wqM$Type[match(WBID, wqM$WBID)],
     Type = ifelse(is.na(Type), 'NOT SAMPLED', Type),
-    Status = ifelse(WBID %in% c('1558C', '1558B', '1709D', '1709F', '1716A','1696', 
+    Status = ifelse(WBID %in% c(
+      #'1556A', '1530', '1603B', '1624A'
+      '1558C', '1558B', '1709D', '1709F', '1716A','1696', 
                                 '1603B', '1700', '1683', '1530','1624A', '1556A',
-                                '1716D','1701A','1701B'), 'Inactive', 
+                                '1716D','1701A','1701B'
+      ), 'Inactive', 
                          ifelse(Type == 'NOT SAMPLED', 'Not Sampled', 'Active')),
     color = dplyr::case_when(
       Type == 'MARINE' & Status == 'Active' ~ '#00244c',
@@ -120,6 +200,7 @@ wqShp <- sf::st_read('GIS/Waterbody_IDs_(WBIDs).shp') |>
 # Read in stream shapefile
 streamShp <- sf::st_read('GIS/staceywbid.shp') |>
   sf::st_transform("+proj=longlat +ellps=WGS84 +datum=WGS84") |>
+  sf::st_make_valid() |>
   dplyr::filter(
   BASIN_1 %in% c('ANCLOTE RIVER', 'KLOSTERMAN BAYOU RUN', 'CURLEW CREEK',
                  'STEVENSON CREEK', 'LAKE TARPON CANAL', 'MOCCASIN CREEK',
@@ -130,7 +211,7 @@ streamShp <- sf::st_read('GIS/staceywbid.shp') |>
                  'BEAR CREEK', 'BOOKER CREEK', 'CLAM BAYOU DRAIN',
                  '77TH AVE CANAL', 'CEDAR CREEK', 'SUTHERLAND BAYOU',
                  'COW BRANCH', 'BELLEAIR GOLFCLUB RUN')
-) 
+)
 
 
 ```
@@ -188,7 +269,9 @@ for (type in unique(wqShp$Type)) {
 wqLeg <- leg(
   shape  = 'rect', 
   n      = 6, 
-  colors = c('#00244c', '#6A5ACD', '#40E0D0', '#006400', '#E69F00', '#696969'),
+  colors = c('#00244c', 
+             '#6A5ACD', 
+             '#40E0D0', '#006400', '#E69F00', '#696969'),
   fOp    = 0.5, 
   h      = 20, 
   w      = 20
@@ -232,7 +315,9 @@ m <- m |>
     ) |>
   leaflegend::addLegendImage(
     images      = wqLeg,
-    labels      = c('Marine-Active', 'Marine-Inactive', 'Lake', 'Stream-Active', 
+    labels      = c('Marine-Active', 
+                    'Marine-Inactive', 
+                    'Lake', 'Stream-Active', 
                     'Stream-Inactive', 'Not Sampled'),
     labelStyle  = "font-size: 14px;",
     width       = 15,
@@ -242,13 +327,12 @@ m <- m |>
                                 style = 'font-size: 15px; text-align: center;
                                 font-weight: bold;'),
     position = 'bottomleft'
-    ) 
-# |>
-#   leaflet::addPolylines(
-#     data = streamShp,
-#     weight = 0.8,
-#     color = 'blue'
-#     )
+    ) |>
+  leaflet::addPolylines(
+    data = streamShp,
+    weight = 0.8,
+    color = 'blue'
+    )
 
 
 
@@ -301,12 +385,6 @@ observeEvent(input$mapplo_shape_click, {
       fillColor = ~color,
       label     = ~ID
       ) 
-  # |>
-  # leaflet::addPolylines(
-  #   data = streamShp,
-  #   weight = 0.8,
-  #   color = 'blue'
-  #   )
   })
 
 # Get the name of the WBID clicked by the user:
@@ -615,6 +693,7 @@ observeEvent(input$info, {
 nsModal <- modalDialog(
   title = "NOTICE",
   HTML("<b>Pinellas County discontinued water quality sampling in this area in 2012. For more recent data please contact the City of St. Petersburg Public Works at waterdept@stpete.org.</b>"),
+  #HTML("<b>Water quality sampling in this location transitioned from Pinellas County to the City of St. Petersburg in 2013. Data collected prior to 2013 was reported by Pinellas County. For more information on water quality in this area please contact julie.vogel@stpete.org</b>"),
   easyClose = TRUE,
   footer = modalButton("Close")
 )
@@ -1469,15 +1548,15 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!-- average length of algae, if present. If less than 25% of the algae is longer than -->
 <!-- 6 mm, flora is considered balanced. -->
 
-<!-- <!-- #### LVS --> -->
+<!-- <!-- #### LVS --> 
 
-<!-- <!-- The Linear Vegetation Survey (LVS) for flowing streams documents the plant --> -->
-<!-- <!-- community in the measured stream reach. The average sensitivity, measured by the --> -->
-<!-- <!-- Coefficient of Conservatism (COC), of the plant community is calculated based on --> -->
-<!-- <!-- species tolerance to environmental changes. If the average sensitivity is --> -->
-<!-- <!-- greater than or equal to 2.5, the plant community is in balance. The percentage of --> -->
-<!-- <!-- invasive exotics is also noted, with a balanced plant community being less than --> -->
-<!-- <!-- 25% of the plants being invasive. --> -->
+<!-- <!-- The Linear Vegetation Survey (LVS) for flowing streams documents the plant --> 
+<!-- <!-- community in the measured stream reach. The average sensitivity, measured by the --> 
+<!-- <!-- Coefficient of Conservatism (COC), of the plant community is calculated based on --> 
+<!-- <!-- species tolerance to environmental changes. If the average sensitivity is --> 
+<!-- <!-- greater than or equal to 2.5, the plant community is in balance. The percentage of --> 
+<!-- <!-- invasive exotics is also noted, with a balanced plant community being less than --> 
+<!-- <!-- 25% of the plants being invasive. --> 
 
 <!-- #### LVI -->
 
@@ -1910,6 +1989,12 @@ temperatures, nutrient availability, and favorable currents. During red tide eve
 it’s best to limit beach activities, as the airborne toxins can cause eye, nose,
 and throat irritation. 
 
+Pinellas County staff visit beaches along the county's Gulf coast throughout
+the year to collect samples and determine if there is an active red tide bloom.
+In addition, the [Florida FWC](https://myfwc.com/research/redtide/statewide/)
+collects red tide samples throughout the state and
+provide updates on current conditions and forecasting of events.
+
 <br>
 <br>
 ```{r, fig.align = 'center', out.width = '70%', fig.alt = 'Microscopic image of Karenia brevis'}
@@ -1932,7 +2017,7 @@ discharge, which can wash contaminants into coastal waters. When *Enterococcus*
 is elevated, it’s advisable to avoid swimming, particularly for people with open
 wounds or weakened immune systems. While Pinellas County collects this data to 
 inform the public about water quality issues, the 
-[FL Department of Health](https://www.floridahealth.gov/environmental-health/beach-water-quality/county-detail.html?County=Pinellas&Zip=33701-3109) remains the official source for updates and advisories about 
+[FL Department of Health](https://www.floridahealthybeaches.com/counties) remains the official source for updates and advisories about 
 beach conditions and water safety.
 
 
@@ -2277,7 +2362,7 @@ contact Stacey Day (sday@pinellas.gov).
 # Display a annual report PDF:
 fillCol(flex = c(1,0.1),
   tags$iframe(style = "border: none; width: 100%; height: 100%;",
-              src = "2023 PCDEM Ambient Water Quality Report.pdf"))
+              src = "2024 PCDEM Ambient Water Quality Report.pdf"))
 ```
 
 
@@ -2339,7 +2424,7 @@ fillCol(
   fluidRow(
     column(6, shinyWidgets::downloadBttn('datSel', 'Download Selected Site Data',
                                      style = 'simple', block = TRUE, color = 'success')),
-    column(6, shinyWidgets::downloadBttn('datFull', paste0('Download All Site Data (',
+    column(6, shinyWidgets::downloadBttn('datFull', paste0('Download All Data (',
                           round(file.size(wqPath)/(1024^2),1),' Mb)'),
                                          style = 'simple', block = TRUE, color = 'success'))
   ),
@@ -2396,6 +2481,4 @@ fillCol(flex = c(0.07, 1),
 ```
 
 <!-- ### Bioassessments -->
-
-
 
