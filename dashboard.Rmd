@@ -2392,6 +2392,18 @@ tab <- reactive({
         format      = reactable::colFormat(digits = 2, separators = FALSE),
         resizable   = TRUE
         ),
+      columns = list(
+        Latitude      = reactable::colDef(
+          footerStyle = list(fontWeight = "bold"),
+          format      = reactable::colFormat(digits = 6, separators = FALSE),
+          resizable   = TRUE
+        ),
+        Longitude     = reactable::colDef(
+          footerStyle = list(fontWeight = "bold"),
+          format      = reactable::colFormat(digits = 6, separators = FALSE),
+          resizable   = TRUE
+        )
+      ),
       filterable = TRUE,
       defaultPageSize = 50
       )
