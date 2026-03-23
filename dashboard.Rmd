@@ -1022,6 +1022,46 @@ rcd <- reactive({
          plotly::renderPlotly(rcd()))
 ```
 
+### Annual Plots
+
+```{r}
+
+ap <- reactive({
+  
+    annDat <- wqIn |>
+      dplyr::mutate(Year = lubridate::year(Date)) |>
+      dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()],
+                    lubridate::year(Date) != lubride::year(Sys.Date())) |>
+      dplyr::select(Site, Year, WBID, Date, TN, TP, `DO%`, `Chl-a`) |>
+      dplyr::group_by(Site, Year, WBID, Date) |>
+      dplyr::summarise(dplyr::across(c(TN, TP, `DO%`, `Chl-a`), \(x) mean(x, na.rm = TRUE))) |>
+      dplyr::ungroup() |>
+      dplyr::mutate(Site = dplyr::case_when(
+        substr(Site, 1, 1) %in% c('E','W','L','S','R'), substr(Site,1,2), Site
+        )) |>
+      dplyr::group_by(Site, Year, WBID, Date) |>
+      dplyr::summarise(dplyr::across(c(TN, TP, `DO%`, `Chl-a`), \(x) mean(x, na.rm = TRUE))) |>
+      dplyr::ungroup()
+    
+    
+    datArith <- annDat |>
+      dplyr::filter(Site %in% c('W4','W5','W6','W7','W8','E1','E2','E3','E4','E5','RB')) |>
+      dplyr::group_by(Site, WBID, Year) |>
+      dplyr::summarise(dplyr::across(c(TN, TP, `DO%`), 
+                                     \(x) psych::geometric.mean(c, na.rm = TRUE)),
+                       `Chl-a` = mean(`Chl-a`, na.rm = TRUE)) |>
+      dplyr::ungroup() |>
+      dplyr::group_by(Site) |>
+      dplyr::filter(max(Year) == lubridate::year(Sys.Date()) - 1) |>
+      dplyr::ungroup()
+      
+      
+  
+  
+})
+
+```
+
 
 ## Column {.tabset .tabset-fade data-width="230"}
 
@@ -2466,6 +2506,18 @@ RTtab <- reactive({
         format      = reactable::colFormat(digits = 2, separators = FALSE),
         resizable   = TRUE
         ),
+      columns = list(
+        Latitude      = reactable::colDef(
+          footerStyle = list(fontWeight = "bold"),
+          format      = reactable::colFormat(digits = 6, separators = FALSE),
+          resizable   = TRUE
+        ),
+        Longitude     = reactable::colDef(
+          footerStyle = list(fontWeight = "bold"),
+          format      = reactable::colFormat(digits = 6, separators = FALSE),
+          resizable   = TRUE
+        )
+      ),
       filterable = TRUE,
       defaultPageSize = 50
       )
