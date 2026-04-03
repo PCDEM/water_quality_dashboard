@@ -40,7 +40,7 @@ source('R/funcs.R')
 ```{r data handling, include=FALSE}
 
 # Water quality data path:
-wqPath <- 'data/pinellas_wq_2003_2025.xlsx'
+wqPath <- 'data/pinellas_wq_2003_2026.xlsx'
 
 # Import water quality data:
 wqInit <- readxl::read_excel(wqPath, guess_max = 50000) |>
@@ -333,8 +333,6 @@ m <- m |>
     weight = 0.8,
     color = 'blue'
     )
-
-
 
 ```
 
@@ -905,7 +903,8 @@ rcd <- reactive({
   rd <- wqIn |>
     dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()]) |>
     dplyr::filter(Level == 'Surface') |>
-    dplyr::select(Date, WBID, Type, `Chl-a`, `DO%`, TKN, NOX, TP, E_coli, Enterococci) |>
+    dplyr::select(Date, WBID, Type, `Chl-a`, `DO%`, TKN, NOX, TP, E_coli, 
+                  Enterococci) |>
     dplyr::mutate(TN = TKN + NOX) |>
     dplyr::group_by(Date, WBID, Type) |>
     dplyr::summarise_if(is.numeric, meanNA)
@@ -954,11 +953,11 @@ rcd <- reactive({
   rc <- repo |>
     dplyr::ungroup() |>
     dplyr::mutate(
-      chl_grade    = ifelse(`Chl-a` >= wbC$chla_crit, 'Fail', 'Pass'),
-      tp_grade     = ifelse(TP >= wbC$TP_crit,'Fail','Pass'),
-      tn_grade     = ifelse(TN >= wbC$TN_crit,'Fail','Pass'),
-      ecoli_grade  = ifelse(E_coli >= wbC$Ecoli_crit,'Fail','Pass'),
-      entero_grade = ifelse(Enterococci >= wbC$Entero_crit,'Fail','Pass')) |>
+      chl_grade    = ifelse(`Chl-a` > wbC$chla_crit, 'Fail', 'Pass'),
+      tp_grade     = ifelse(TP > wbC$TP_crit,'Fail','Pass'),
+      tn_grade     = ifelse(TN > wbC$TN_crit,'Fail','Pass'),
+      ecoli_grade  = ifelse(E_coli > wbC$Ecoli_crit,'Fail','Pass'),
+      entero_grade = ifelse(Enterococci > wbC$Entero_crit,'Fail','Pass')) |>
     dplyr::left_join(do |> dplyr::select(Year, do_grade), by = c('Year')) |>
     dplyr::select(
       Year, 
@@ -1022,43 +1021,78 @@ rcd <- reactive({
          plotly::renderPlotly(rcd()))
 ```
 
-### Annual Plots
+### Annual Summary
 
 ```{r}
 
 ap <- reactive({
-  
+
     annDat <- wqIn |>
-      dplyr::mutate(Year = lubridate::year(Date)) |>
+      dplyr::mutate(Year = lubridate::year(Date),
+                    TN = TKN + NOX,
+                    TN = as.numeric(TN)) |>
       dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()],
-                    lubridate::year(Date) != lubride::year(Sys.Date())) |>
-      dplyr::select(Site, Year, WBID, Date, TN, TP, `DO%`, `Chl-a`) |>
-      dplyr::group_by(Site, Year, WBID, Date) |>
-      dplyr::summarise(dplyr::across(c(TN, TP, `DO%`, `Chl-a`), \(x) mean(x, na.rm = TRUE))) |>
-      dplyr::ungroup() |>
-      dplyr::mutate(Site = dplyr::case_when(
-        substr(Site, 1, 1) %in% c('E','W','L','S','R'), substr(Site,1,2), Site
-        )) |>
-      dplyr::group_by(Site, Year, WBID, Date) |>
-      dplyr::summarise(dplyr::across(c(TN, TP, `DO%`, `Chl-a`), \(x) mean(x, na.rm = TRUE))) |>
+                    lubridate::year(Date) != lubridate::year(Sys.Date()),
+                    Level == 'Surface') |>
+      dplyr::select(WBID, Year, Date, TN, TP, `Chl-a`) |>
+      dplyr::group_by(WBID, Year, Date) |>
+      dplyr::summarise(dplyr::across(c(TN, TP, `Chl-a`), 
+                                     \(x) mean(x, na.rm = TRUE))) |>
       dplyr::ungroup()
-    
-    
-    datArith <- annDat |>
-      dplyr::filter(Site %in% c('W4','W5','W6','W7','W8','E1','E2','E3','E4','E5','RB')) |>
-      dplyr::group_by(Site, WBID, Year) |>
-      dplyr::summarise(dplyr::across(c(TN, TP, `DO%`), 
-                                     \(x) psych::geometric.mean(c, na.rm = TRUE)),
-                       `Chl-a` = mean(`Chl-a`, na.rm = TRUE)) |>
-      dplyr::ungroup() |>
-      dplyr::group_by(Site) |>
-      dplyr::filter(max(Year) == lubridate::year(Sys.Date()) - 1) |>
-      dplyr::ungroup()
-      
-      
-  
-  
+
+
+    if (unique(annDat$WBID) %in% c('1528A','1618C','1694B','1694A','1558N','1558I',
+                                   '1558H2','1558H','1558G','1558F','1661')) {
+      dat <- annDat |>
+        dplyr::group_by(WBID, Year) |>
+        dplyr::summarise(dplyr::across(c(TN, TP),
+                                       \(x) psych::geometric.mean(x, na.rm = TRUE)),
+                         `Chl-a` = mean(`Chl-a`, na.rm = TRUE)) |>
+        dplyr::ungroup() |>
+        dplyr::filter(Year < lubridate::year(Sys.Date())) |>
+        dplyr::mutate(
+          dplyr::across('TN':'Chl-a', round, 2),
+          `Chl-a` = round(`Chl-a`, 1)
+        )
+    } else {
+      dat <- annDat |>
+        dplyr::group_by(WBID, Year) |>
+        dplyr::summarise(dplyr::across(c(TN, TP, `Chl-a`),
+                                \(x) psych::geometric.mean(x, na.rm = TRUE))) |>
+        dplyr::ungroup() |>
+        dplyr::filter(Year < lubridate::year(Sys.Date())) |>
+        dplyr::mutate(
+          dplyr::across('TN':'Chl-a', round, 2),
+          `Chl-a` = round(`Chl-a`, 1)
+        )
+    }
+
+    list(
+      annTN = annPlt(
+        df = dat, 
+        param = 'TN', 
+        crit = wCrit$TN_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]
+        ),
+      annTP = annPlt(
+        df = dat, 
+        param = 'TP', 
+        crit = wCrit$TP_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]
+        ),
+      annChl = annPlt(
+        df = dat, 
+        param = 'Chl-a', 
+        crit = wCrit$chla_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]
+        )
+    )
+
 })
+
+ # display table
+ fillCol(flex = c(1, rep(1,3)),
+         plotly::renderPlotly(ap()$annTN),
+         plotly::renderPlotly(ap()$annTP),
+         plotly::renderPlotly(ap()$annChl)
+ )
 
 ```
 
@@ -1275,7 +1309,7 @@ renderG <- reactiveVal(TRUE)
 # Obtain the active tab name from JavaScript code and update the gauge plots:
 observeEvent(input$active_tab, {
   if(input$active_tab == 'Oxygen, Nutrients, & Chlorophyll-a' | renderG()) {
-    output$gaugePlots <- renderUI({
+    output$rightPanel <- renderUI({
       fillCol(flex = c(1, rep(1,4)),
         highcharter::highchartOutput("DOg"),
         highcharter::highchartOutput("chlg"),
@@ -1284,7 +1318,7 @@ observeEvent(input$active_tab, {
       )
     })
   } else if(input$active_tab == 'Water Clarity') {
-    output$gaugePlots <- renderUI({
+    output$rightPanel <- renderUI({
       fillCol(flex = c(1, rep(1,3)),
         highcharter::highchartOutput("TSSg"),
         highcharter::highchartOutput("Turb"),
@@ -1292,21 +1326,21 @@ observeEvent(input$active_tab, {
       )
     })
   } else if(input$active_tab == 'Temperature & Salinity') {
-    output$gaugePlots <- renderUI({
+    output$rightPanel <- renderUI({
       fillCol(flex = c(1, rep(1,2)),
         highcharter::highchartOutput("Tg"),
         highcharter::highchartOutput("Sg")
       )
     })
   } else if(input$active_tab == 'Bacteria') {
-    output$gaugePlots <- renderUI({
+    output$rightPanel <- renderUI({
       fillCol(flex = c(1, rep(1,2)),
         highcharter::highchartOutput("eg"),
         highcharter::highchartOutput("entg")
       )
     })
   } else if(input$active_tab == 'Report Card'){
-    output$gaugePlots <- renderUI({
+    output$rightPanel <- renderUI({
       fillCol(flex = c(1, rep(1,4)),
       paste('\nThis water quality report card for the',stringr::str_to_title(site()),
                 'watershed is based on criteria set by FDEP with a Pass/Fail status 
@@ -1316,13 +1350,27 @@ observeEvent(input$active_tab, {
         paste0(''),
         paste0(''))
     })
+  } else if(input$active_tab == 'Annual Summary'){
+    output$rightPanel <- renderUI({
+      fillCol(flex = c(1, 1),
+      paste0('\nThese plots show the average annual values for total nitrogen,
+            total phosphorus, and chlorophyll-a for the ', stringr::str_to_title(site()),
+            ' watershed from ', lubridate::year(min(getData()$Date)),' to ',
+            lubridate::year(max(getData()$Date)),'. These values are calculated
+            using arithmetic mean or geometric mean depending on watershed specific
+            criteria set by FDEP (refer to the Annual Report for more detail).
+            The orange bars represent years when the average value was above
+            the FDEP criteria (failing) and the green bars represent years when 
+            the average values was below the FDEP criteria (passing).')
+      )
+    })
   } 
   # Need this to allow gauges to update based on clicked tab:
   renderG(FALSE)
 })
 
 # Display the gauge plots:
-uiOutput("gaugePlots")
+uiOutput("rightPanel")
 
 ```
 
@@ -1332,7 +1380,7 @@ Some of FDEP's water quality criteria include dissolved oxygen, chlorophyll-a, a
 
 An increase in nutrient levels in the water can can promote the growth of algal blooms and other nuisance aquatic vegetation. As the blooms begin to die off, their decomposition leads to a decrease in dissolved oxygen in the water, which can be harmful to aquatic life. 
 
-The Pass/Fail designation for each parameter is determined by calculating the annual geometric mean and then compar  ing it to the FDEP standard. If the value exceeds the FDEP standard, the site will get a 'Fail' for that parameter. If the value does not exceed the standard, the site will get a 'Pass'. Visit the FDEP Water Quality Standards [webpage](https://floridadep.gov/DEAR/Water-Quality-Standards){target="_blank"} for more information about specific water quality criteria throughout the state of Florida.
+The Pass/Fail designation for each parameter is determined by calculating the annual geometric mean and then comparing it to the FDEP standard. If the value exceeds the FDEP standard, the site will get a 'Fail' for that parameter. If the value does not exceed the standard, the site will get a 'Pass'. Visit the FDEP Water Quality Standards [webpage](https://floridadep.gov/DEAR/Water-Quality-Standards){target="_blank"} for more information about specific water quality criteria throughout the state of Florida.
 
 
 <!-- Bioassessments -->
