@@ -656,6 +656,7 @@ getWBID <- function(spDat, lat, lng){
 
 # Function to create a plotly plot
 plt <- function(data, var, crit = 0){
+  
   p <- plotly::plot_ly(
     data, 
     x      = ~Date, 
@@ -667,21 +668,58 @@ plt <- function(data, var, crit = 0){
     name   = 'Data'
     ) |>
     plotly::layout(
-      yaxis = c(list(linecolor = 'black', linewidth = 0.5, mirror = TRUE),
-                list(title = list(text = paste0('<b>', var, '<b>'), font = list(size=13)))),
-      xaxis = list(linecolor = 'black', linewidth = 0.5, mirror = TRUE, title = ""))
+      yaxis = list(
+        linecolor = 'black', 
+        linewidth = 0.5, 
+        mirror = TRUE,
+        title = list(
+          text = paste0('<b>', var, '<b>'), 
+          font = list(size=13))
+        ),
+      xaxis = list(
+        tickangle = -45,
+        dtick = 'M24',
+        range = c(unique(min(data$Date)) - months(12) , max(data$Date)) + months(6),
+        hoverformat = '%b, %d, %Y',
+        linecolor = 'black', 
+        linewidth = 0.5, 
+        mirror = TRUE, 
+        title = ""
+        )
+      )
   
   if (crit != 0){
     p <- p |>
       plotly::add_trace(
-        y = crit, 
-        mode = 'lines', 
+        y = crit,
+        mode = 'lines',
         line = list(color = '#DF5353',dash = 'dash', width = 1.5),
-        name = 'FDEP\nCriterion', 
+        name = 'FDEP\nCriterion',
         marker = NULL)
   } else {
     p
   }
+
+  # if (crit != 0 & lubridate::year(data$Date) <= 2014){
+  #   p <- p |>
+  #     plotly::add_trace(
+  #       y = crit,
+  #       mode = 'lines', 
+  #       line = list(color = '#DF5353',dash = 'dash', width = 1.5),
+  #       name = 'FDEP\nCriterion', 
+  #       marker = NULL)
+  # } else if (crit != 0 & lubridate::year(data$Date) >= 2015){
+  #   p <- p |>
+  #     plotly::add_trace(
+  #       y = crit/2,
+  #       mode = 'lines', 
+  #       line = list(color = '#DF5353',dash = 'dash', width = 1.5),
+  #       name = 'FDEP\nCriterion', 
+  #       marker = NULL)
+  # } else {
+  #   p
+  # }
+    
 }
 
 #' Function to create a gauge plot:
@@ -857,6 +895,92 @@ create_popup <- function(ID, REGION, Basin, HUC, WBID, Area, CLASS, Type, Status
   popup_content <- paste0(popup_content, "</table></div>")
   
   return(popup_content)
+}
+
+hline <- function(y, color) {
+  list(
+    type = 'line',
+    x0 = 0,
+    x1 = 1,
+    xref = 'paper',
+    y0 = y,
+    y1 = y,
+    line = list(color = color, dash = 'dash')
+  )
+}
+
+
+annPlt <- function(df, param, crit) {
+  
+  df$group <- dplyr::case_when(
+    df[[param]] > crit ~ 'fail',
+    df[[param]] <= crit ~ 'pass',
+    TRUE ~ NA
+  )
+  
+  plt <- plotly::plot_ly()
+  
+  if (any(df$group == 'pass')) {
+    plt <- plt |>
+      plotly::add_trace(
+        data = df[df$group == 'pass', ],
+        x = ~Year,
+        y = df[df$group == 'pass', ][[param]],
+        type = 'bar',
+        name = 'Annual Average\n(Passing)',
+        marker = list(color = '#c6e0b4',
+                      line = list(color = 'black', width = 1.5))
+      )
+  }
+  
+  if (any(df$group == 'fail')) {
+    plt <- plt |>
+      plotly::add_trace(
+        data = df[df$group == 'fail', ],
+        x = ~Year,
+        y = df[df$group == 'fail', ][[param]],
+        type = 'bar',
+        name = 'Annual Average\n(Failing)',
+        marker = list(color = '#f4b084',
+                      line = list(color = 'black', width = 1.5))
+      )
+  }
+  
+  plt <- plt |>
+    plotly::add_trace(
+      data = df,
+      x = ~Year,
+      y = crit,
+      type = 'scatter',
+      mode = 'lines',
+      name = 'FDEP\nCriterion',
+      line = list(color = '#DF5353', dash = 'dash', width = 1.5) 
+    ) |>
+    plotly::layout(
+      yaxis = list(
+        title = dplyr::case_when(
+          param == 'TN' ~ '<b>Total Nitrogen\n(mg/L)</b>',
+          param == 'TP' ~ '<b>Total Phosphorus\n(mg/L)</b>',
+          param == 'Chl-a' ~ '<b>Chlorophyll-a\n(µg/L)</b>',
+          TRUE ~ NA
+          ),
+       rangemode = 'tozero',
+       linecolor = 'black',
+       linewidth = 0.5,
+       mirror = TRUE
+       ),
+      xaxis = list(
+        title = NA,
+        tickangle = -45,
+        dtick = 2,
+        linecolor = 'black',
+        linewidth = 0.5,
+        mirror = TRUE
+        )
+      )
+    
+  return(plt)
+  
 }
 
 
