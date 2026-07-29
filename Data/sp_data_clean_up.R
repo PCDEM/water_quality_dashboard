@@ -20,7 +20,8 @@ cospRaw <- readxl::read_excel('data/st_pete_wq_2013_2026.xlsx')
 
 # Reformat SP data to match PC data:
 cospWQ <- cospRaw |>
-  dplyr::filter(! substr(Analysis,1,12) == 'Confirmation') |>
+  dplyr::filter(! substr(Analysis,1,12) == 'Confirmation',
+                tResult != 'ND') |>
   dplyr::select(Site = SampleName,
          Latitude,
          Longitude,
@@ -69,11 +70,11 @@ cospWQ <- cospRaw |>
                 Site = ifelse(substr(Site,1,6) %in% c('COSPE6','COSPE7'),substr(Site,5,8),
                               Site)) |>
   dplyr::arrange(Site, Date) 
-  tidyr::pivot_wider(id_cols = c(Site, Latitude, Longitude, Date),
-              names_from = Analyte, values_from = Value) 
-  dplyr::mutate_at(c('Latitude', 'Longitude', 'DO%', 'Salinity', 'Secchi',
-              'Turbidity','Temp_Water', 'TN','TP','TSS','E_coli',
-              'Enterococci','Chl-a'), as.numeric) 
+  # tidyr::pivot_wider(id_cols = c(Site, Latitude, Longitude, Date),
+  #             names_from = Analyte, values_from = Value) 
+  # dplyr::mutate_at(c('Latitude', 'Longitude', 'DO%', 'Salinity', 'Secchi',
+  #             'Turbidity','Temp_Water', 'TN','TP','TSS','E_coli',
+  #             'Enterococci','Chl-a'), as.numeric) 
 
 cospWQ |> 
   dplyr::summarise(n = dplyr::n(), .by = c(Site, Latitude, Longitude, Date, Analyte)) |> 
