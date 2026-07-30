@@ -68,7 +68,7 @@ wqIn <- wqInit |>
 #                         'Dissolved Oxygen Saturation', 'pH', 'Salinity',
 #                         'Turbidity', 'Temperature', 'Nitrate+Nitrite-N',
 #                         'Total Nitrogen', 'Orthophosphate as P', 'Total Phosphorous',
-#                         'Total Kjeldahl Nitrogen', 'TSS', 'Secchi Disk', 'E. Coli'),
+#                         'Total Kjeldahl Nitrogen', 'TSS', 'Secchi Disk', 'E. coli'),
 #                 substr(Site,1,11) != 'Field Blank') |>
 #   dplyr::mutate(Date = substr(Date, 1,9),
 #          Date = as.Date(substr(Date,1,9), format = '%d-%b-%y'),
@@ -85,7 +85,7 @@ wqIn <- wqInit |>
 #          TP = 'Total Phosphorous',
 #          TKN = 'Total Kjeldahl Nitrogen',
 #          OP = 'Orthophosphate as P',
-#          E_coli = 'E. Coli',
+#          E_coli = 'E. coli',
 #          DO = 'Dissolved Oxygen',
 #          `Chl-a` = 'Chlorophyll-a') |>
 #   dplyr::mutate_at(c('Latitude', 'Longitude', 'DO', 'DO%', 'Salinity', 'Secchi',
