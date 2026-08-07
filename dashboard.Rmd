@@ -1089,9 +1089,9 @@ ap <- reactive({
 
  # display table
  fillCol(flex = c(1, rep(1,3)),
+         plotly::renderPlotly(ap()$annChl),
          plotly::renderPlotly(ap()$annTN),
-         plotly::renderPlotly(ap()$annTP),
-         plotly::renderPlotly(ap()$annChl)
+         plotly::renderPlotly(ap()$annTP)
  )
 
 ```
