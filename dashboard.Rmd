@@ -168,7 +168,7 @@ wqShp <- sf::st_read('GIS/Waterbody_IDs_(WBIDs).shp') |>
     Status = ifelse(WBID %in% c(
       # '1556A', '1530', '1603B', '1624A'
       '1558C', '1558B', '1709D', '1709F', '1716A','1696',
-                                '1603B', '1700', '1683', '1530','1624A', '1556A',
+                                '1603B', '1700', '1683', '1530', '1556A',
                                 '1716D','1701A','1701B'
       ), 'Inactive', 
                          ifelse(Type == 'NOT SAMPLED', 'Not Sampled', 'Active')),
@@ -227,7 +227,7 @@ m <- leaflet::leaflet(
   ) |>
   leaflet::addTiles(attribution = '') |>
   leaflet::addProviderTiles(
-    leaflet::providers$CartoDB.Positron, group = 'CartoDB.Positron'
+    leaflet::providers$Esri.WorldGrayCanvas, group = 'Esri.WorldGrayCanvas'
     ) |>
   leaflet::addProviderTiles(
     leaflet::providers$Esri.WorldImagery, group = 'Esri.WorldImagery'
@@ -291,7 +291,7 @@ m <- m |>
     ) |> 
   leaflet::addLayersControl(
     position = "topleft",  
-    baseGroups = c("CartoDB.Positron", "Esri.WorldImagery", "OpenTopoMap"),
+    baseGroups = c("Esri.WorldGrayCanvas", "Esri.WorldImagery", "OpenTopoMap"),
     overlayGroups = c(unique(wqShp$Type)),
     options = leaflet::layersControlOptions(
       collapsed = TRUE)
@@ -1427,7 +1427,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--   ) |> -->
 <!--   leaflet::addTiles(attribution = '') |> -->
 <!--   leaflet::addProviderTiles( -->
-<!--     leaflet::providers$CartoDB.Positron, group = 'CartoDB.Positron' -->
+<!--     leaflet::providers$Esri.WorldGrayCanvas, group = 'Esri.WorldGrayCanvas' -->
 <!--     ) |> -->
 <!--   leaflet::addProviderTiles( -->
 <!--     leaflet::providers$Esri.WorldImagery, group = 'Esri.WorldImagery' -->
@@ -1483,7 +1483,7 @@ The Pass/Fail designation for each parameter is determined by calculating the an
 <!--   ) |> -->
 <!--   leaflet::addLayersControl( -->
 <!--     position = "topleft", -->
-<!--     baseGroups = c("CartoDB.Positron", "Esri.WorldImagery", "OpenTopoMap"), -->
+<!--     baseGroups = c("Esri.WorldGrayCanvas", "Esri.WorldImagery", "OpenTopoMap"), -->
 <!--     options = leaflet::layersControlOptions( -->
 <!--       collapsed = TRUE) -->
 <!--     ) |> -->
@@ -2228,7 +2228,7 @@ rtm <- reactive({
   
   # Make red tide map
   rtm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
-    leaflet::addProviderTiles(leaflet::providers$CartoDB.VoyagerLabelsUnder) |>
+    leaflet::addProviderTiles(leaflet::providers$Stadia.AlidadeSmooth) |>
     leaflet::setView(
       lng  = -82.72, 
       lat  = 27.905, 
@@ -2375,7 +2375,7 @@ bm <- reactive({
 
   # Make bacteria map
   bm <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl=FALSE)) |>
-    leaflet::addProviderTiles(leaflet::providers$CartoDB.VoyagerLabelsUnder) |>
+    leaflet::addProviderTiles(leaflet::providers$Stadia.AlidadeSmooth) |>
     leaflet::setView(
       lng  = -82.72, 
       lat  = 27.905, 
