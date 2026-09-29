@@ -828,7 +828,7 @@ table_row <- function(label, value, bg_color, color = "black") {
 }
 
 # Generate the entire table popup with conditional rows
-create_popup <- function(ID, REGION, Basin, HUC, WBID, Area, CLASS, Type, Status, 
+create_popup <- function(ID, REGION, HUC, WBID, Area, CLASS, Type, Status, 
                          DO_crit, chla_crit, TN_crit, TP_crit, Ecoli_crit, 
                          Entero_crit, wq = TRUE) {
   
@@ -849,7 +849,7 @@ create_popup <- function(ID, REGION, Basin, HUC, WBID, Area, CLASS, Type, Status
     table_row("Sampling Status", Status, c1, 
               ifelse(Status == "Active", "green", ifelse(Status == "Inactive", 
                                                          "red", "black"))),
-    table_row("Pinellas Basin", Basin, c2),
+    # table_row("Pinellas Basin", Basin, c2),
     table_row("Region", REGION, c1),
     table_row("HUC", HUC, c2),
     table_row("WBID", WBID, c1),
@@ -982,8 +982,6 @@ annPlt <- function(df, param, crit) {
   return(plt)
   
 }
-
-
 
 # Function to generate plot for SCI data:
 bioPlt <- function(x, bio){

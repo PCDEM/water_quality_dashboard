@@ -20,8 +20,9 @@ cospRaw <- readxl::read_excel('data/st_pete_wq_2013_2026.xlsx')
 
 # Reformat SP data to match PC data:
 cospWQ <- cospRaw |>
-  dplyr::filter(! substr(Analysis,1,12) == 'Confirmation',
-                tResult != 'ND') |>
+  dplyr::filter(substr(Analysis,1,12) != 'Confirmation',
+                tResult != 'ND',
+                tResult != 0) |>
   dplyr::select(Site = SampleName,
          Latitude,
          Longitude,
@@ -32,7 +33,7 @@ cospWQ <- cospRaw |>
          tResult) |>
   dplyr::mutate(
     Analyte = dplyr::case_when(
-      Analyte %in% c('CHL-A', 'Chlorophyll A', "Corrected Chlorophyll A") ~ 'Chl-a',
+      Analyte %in% c('CHL-A', 'Chlorophyll A', "Corrected Chlorophyll A", 'Chlorophyll-a') ~ 'Chl-a',
       Analyte %in% c('CHL-B', 'Chlorophyll B', 'Chlorophyll-b') ~ 'Chl-b',
       Analyte %in% c('CHL-C', 'Chlorophyll C', 'Chlorophyll-c') ~ 'Chl-c',
       Analyte %in% c('Dissolved Oxygen', 'Dissolved oxygen (DO)') ~ 'DO',
@@ -59,29 +60,32 @@ cospWQ <- cospRaw |>
     )
   ) |>
   dplyr::mutate(Value = ifelse(is.na(Result), tResult, Result)) |>
-  dplyr::select(-c(Result, tResult, Analysis)) |>
-  dplyr::filter(Analyte %in% c('DO%','Chl-a','TN','TP','TSS','Turbidity','Secchi',
+  dplyr::select(-c(Result, tResult)) |>
+  dplyr::filter(Analyte %in% c('DO%','Chl-a','Nitrate','Nitrite','TKN','TN','TP',
+                               'TSS','Turbidity','Secchi',
                         'Temp_Water','Salinity', 'E_coli','Enterococci'),
                 Site != 'Reagent Water Blank') |>
   tidyr::drop_na(Value) |>
-  dplyr::distinct() |>
   dplyr::mutate(Date = substr(Date, 1,9),
                 Date = as.Date(substr(Date,1,9), format = '%d-%b-%y'),
-                Site = ifelse(substr(Site,1,6) %in% c('COSPE6','COSPE7'),substr(Site,5,8),
+                Site = ifelse(substr(Site,1,6) %in% c('COSPE6','COSPE7'),substr(Site,5,6),
                               Site)) |>
-  dplyr::arrange(Site, Date) 
-  # tidyr::pivot_wider(id_cols = c(Site, Latitude, Longitude, Date),
-  #             names_from = Analyte, values_from = Value) 
-  # dplyr::mutate_at(c('Latitude', 'Longitude', 'DO%', 'Salinity', 'Secchi',
-  #             'Turbidity','Temp_Water', 'TN','TP','TSS','E_coli',
-  #             'Enterococci','Chl-a'), as.numeric) 
+  dplyr::distinct(Site, Date, Analyte, Value, .keep_all = TRUE) |>
+  dplyr::group_by(Site, Date, Analyte) |>
+  dplyr::slice_max(order_by = Value, n = 1, with_ties = FALSE) |>
+  dplyr::ungroup() |>
+  dplyr::arrange(Site, Date) |>
+  tidyr::pivot_wider(id_cols = c(Site, Latitude, Longitude, Date),
+              names_from = Analyte, values_from = Value) |>
+  dplyr::mutate_at(c('Latitude', 'Longitude', 'DO%', 'Salinity', 'Secchi',
+              'Turbidity','Temp_Water','Nitrate','Nitrite', 'TN','TP','TSS','E_coli',
+              'Enterococci','Chl-a'), as.numeric) |>
+  dplyr::mutate(NOX = Nitrate + Nitrite)
 
-cospWQ |> 
-  dplyr::summarise(n = dplyr::n(), .by = c(Site, Latitude, Longitude, Date, Analyte)) |> 
-  dplyr::filter(n > 1L)
+
 
 SPwbid <- readxl::read_excel('data/cosp_WBID.xlsx') |>
-  dplyr::select(Site = SampleName, WBID, Segment = WATERBODY_NAME, Type = WATER_TYPE) |>
+  dplyr::select(Site = SampleName, WBID, Segment = WATERBODY_NAME, Type = DISP_TYPE) |>
   dplyr::mutate(bact =
            dplyr::case_when(
              Site == '32-03' ~ 'Entero',
@@ -111,3 +115,5 @@ cospW <- cospWQ |>
   dplyr::relocate(WBID, Segment, Type, .after = Site) |>
   dplyr::mutate(Level = 'Surface')
 
+
+openxlsx::write.xlsx(cospW, 'data/st_pete_wq_2013_2026_clean.xlsx')
