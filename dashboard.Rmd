@@ -55,7 +55,8 @@ wqIn <- wqInit |>
 
 # This is for the cleaned version of the St Pete data:
 cospW <- readxl::read_excel('data/st_pete_wq_2013_2026_clean.xlsx') |>
-  dplyr::mutate(Source = 'STPETE')
+  dplyr::mutate(Source = 'STPETE',
+                TKN = as.numeric(TKN))
 wqIn <- dplyr::bind_rows(wqIn, cospW)
 
 
@@ -284,7 +285,7 @@ getData <- reactive({
   data <- data.frame(
     dplyr::filter(wqM, WBID == wbid) |>
     dplyr::select(
-      Date, DO, chl_a, TN, TP, TSS, Turbidity, Secchi, Temp, Salinity, Ecoli, Entero
+      Date, Type, DO, chl_a, TN, TP, TSS, Turbidity, Secchi, Temp, Salinity, Ecoli, Entero
       )
     )
     return(data)
@@ -622,8 +623,8 @@ observeEvent(input$info, {
 # UI for the initial informational popup:
 nsModal <- modalDialog(
   title = "NOTICE",
-  HTML("<b>Pinellas County discontinued water quality sampling in this area in 2012. For more recent data please contact the City of St. Petersburg Public Works at waterdept@stpete.org.</b>"),
-  #HTML("<b>Water quality sampling in this location transitioned from Pinellas County to the City of St. Petersburg in 2013. Data collected prior to 2013 was reported by Pinellas County. For more information on water quality in this area please contact julie.vogel@stpete.org</b>"),
+  # HTML("<b>Pinellas County discontinued water quality sampling in this area in 2012. For more recent data please contact the City of St. Petersburg Public Works at waterdept@stpete.org.</b>"),
+  HTML("<b>Water quality sampling in this location transitioned from Pinellas County to the City of St. Petersburg in 2013. Data collected prior to 2013 was reported by Pinellas County. For more information on water quality in this area please contact SurfaceWQ@stpete.org</b>"),
   easyClose = TRUE,
   footer = modalButton("Close")
 )
