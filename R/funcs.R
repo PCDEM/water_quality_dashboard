@@ -913,14 +913,14 @@ hline <- function(y, color) {
 annPlt <- function(df, param, crit) {
   
   df$group <- dplyr::case_when(
-    df[[param]] > crit ~ 'fail',
-    df[[param]] <= crit ~ 'pass',
+    df[[param]] >= crit ~ 'fail',
+    df[[param]] < crit ~ 'pass',
     TRUE ~ NA
   )
   
   plt <- plotly::plot_ly()
   
-  if (any(df$group == 'pass')) {
+  if (! is.na(any(df$group == 'pass'))) {
     plt <- plt |>
       plotly::add_trace(
         data = df[df$group == 'pass', ],
@@ -933,7 +933,7 @@ annPlt <- function(df, param, crit) {
       )
   }
   
-  if (any(df$group == 'fail')) {
+  if (! is.na(any(df$group == 'fail'))) {
     plt <- plt |>
       plotly::add_trace(
         data = df[df$group == 'fail', ],
