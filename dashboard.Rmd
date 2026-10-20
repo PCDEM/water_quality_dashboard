@@ -288,6 +288,7 @@ getData <- reactive({
       Date, Type, DO, chl_a, TN, TP, TSS, Turbidity, Secchi, Temp, Salinity, Ecoli, Entero
       )
     )
+
     return(data)
   })
 
@@ -1002,8 +1003,8 @@ ap <- reactive({
 
     list(
       annTN = annPlt(
-        df = dat, 
-        param = 'TN', 
+        df = dat,
+        param = 'TN',
         crit = wCrit$TN_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]
         ),
       annTP = annPlt(
@@ -2398,7 +2399,7 @@ Data Download
 
 # Get data for download
 datWB <- reactive({
-  dat <- wqInit |>
+  dat <- wqIn |>
            dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()])
   return(dat)
   })
