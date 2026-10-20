@@ -963,7 +963,7 @@ ap <- reactive({
 
     annDat <- wqIn |>
       dplyr::mutate(Year = lubridate::year(Date),
-                    TN = TKN + NOX,
+                    TN = ifelse(Source == 'PINELLAS', TKN + NOX, TN),
                     TN = as.numeric(TN)) |>
       dplyr::filter(WBID == wqShp$WBID[wqShp$ID == site()],
                     lubridate::year(Date) != lubridate::year(Sys.Date()),
