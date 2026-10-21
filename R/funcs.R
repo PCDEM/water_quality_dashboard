@@ -656,16 +656,20 @@ getWBID <- function(spDat, lat, lng){
 
 # Function to create a plotly plot
 plt <- function(data, var, crit = 0){
+
+  d <- data |> 
+    tidyr::drop_na()
   
   p <- plotly::plot_ly(
-    data, 
-    x      = ~Date, 
-    y      = ~data[,2], 
+    d,
+    x      = d[,1], 
+    y      = d[,2], 
     type   = 'scatter', 
     mode   = 'lines+markers',
     marker = list(size = 5, color = 'lightblue', line = list(color='black',width = 2)),
     line   = list(color = 'black'), 
-    name   = 'Data'
+    name   = 'Data',
+    connectgaps = TRUE
     ) |>
     plotly::layout(
       yaxis = list(
@@ -679,7 +683,7 @@ plt <- function(data, var, crit = 0){
       xaxis = list(
         tickangle = -45,
         dtick = 'M24',
-        range = c(unique(min(data$Date)) - months(12) , max(data$Date)) + months(6),
+        range = c(unique(min(d$Date)) - months(12) , max(d$Date)) + months(6),
         hoverformat = '%b, %d, %Y',
         linecolor = 'black', 
         linewidth = 0.5, 
@@ -699,28 +703,9 @@ plt <- function(data, var, crit = 0){
   } else {
     p
   }
-
-  # if (crit != 0 & lubridate::year(data$Date) <= 2014){
-  #   p <- p |>
-  #     plotly::add_trace(
-  #       y = crit,
-  #       mode = 'lines', 
-  #       line = list(color = '#DF5353',dash = 'dash', width = 1.5),
-  #       name = 'FDEP\nCriterion', 
-  #       marker = NULL)
-  # } else if (crit != 0 & lubridate::year(data$Date) >= 2015){
-  #   p <- p |>
-  #     plotly::add_trace(
-  #       y = crit/2,
-  #       mode = 'lines', 
-  #       line = list(color = '#DF5353',dash = 'dash', width = 1.5),
-  #       name = 'FDEP\nCriterion', 
-  #       marker = NULL)
-  # } else {
-  #   p
-  # }
     
 }
+
 
 #' Function to create a gauge plot:
 #' data: data frame with Date and variable to plot;
@@ -786,7 +771,10 @@ gauge <- function(data, var, unit, max, round, g1, g2, r1, r2, width){
 # check data availability for plot or retrun message:
 pltMsg <- function(dataFunc, colName, plotFunc) {
   renderUI({
-    if (length(which(!is.na(dataFunc()[[colName]]))) < 5) {
+    if (all(is.na(dataFunc()[dataFunc()$Year >= 
+                             (max(dataFunc()$Year) - 4), ][[colName]])) |
+        length(which(!is.na(dataFunc()[[colName]]))) < 5) {
+    # if (length(which(!is.na(dataFunc()[[colName]]))) < 5) {
       h3("PARAMETER NOT COLLECTED AT THIS SITE", 
          style = "color: red; text-align: center; font-weight: bold;")
     } else {

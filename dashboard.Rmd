@@ -54,9 +54,10 @@ wqIn <- wqInit |>
                 TN = NA) 
 
 # This is for the cleaned version of the St Pete data:
-cospW <- readxl::read_excel('data/st_pete_wq_2013_2026_clean.xlsx') |>
+cospW <- readxl::read_excel('data/st_pete_data/st_pete_wq_2013_2026_clean.xlsx') |>
   dplyr::mutate(Source = 'STPETE',
-                TKN = as.numeric(TKN))
+                TKN = as.numeric(TKN),
+                Type = ifelse(WBID == '1668F', 'FRESHWATER',Type))
 wqIn <- dplyr::bind_rows(wqIn, cospW)
 
 
@@ -97,6 +98,7 @@ wqShp <- sf::st_read('GIS/Waterbody_IDs_(WBIDs).shp') |>
     geometry = sf::st_make_valid(geometry),
     Type = wqM$Type[match(WBID, wqM$WBID)],
     Type = ifelse(is.na(Type), 'NOT SAMPLED', Type),
+    Type = ifelse(WBID == '1668F', 'FRESHWATER',Type),
     Status = ifelse(WBID %in% c(
       '1556A', '1530', '1603B', '1624A'
       # '1558C', '1558B', '1709D', '1709F', '1716A','1696',
@@ -106,7 +108,6 @@ wqShp <- sf::st_read('GIS/Waterbody_IDs_(WBIDs).shp') |>
                          ifelse(Type == 'NOT SAMPLED', 'Not Sampled', 'Active')),
     color = dplyr::case_when(
       Type == 'MARINE' & Status == 'Active' ~ '#00244c',
-      Type == 'MARINE' & Status == 'Inactive' ~ '#6A5ACD',
       Type == 'LAKE' ~ '#40E0D0',
       Type %in% c('TIDAL', 'FRESHWATER') & Status == 'Active' ~ '#006400',
       Type %in% c('TIDAL', 'FRESHWATER') & Status == 'Inactive' ~ '#E69F00',
@@ -201,10 +202,8 @@ for (type in unique(wqShp$Type)) {
 # Custom legend for WBID types:
 wqLeg <- leg(
   shape  = 'rect', 
-  n      = 6, 
-  colors = c('#00244c', 
-             '#6A5ACD', 
-             '#40E0D0', '#006400', '#E69F00', '#696969'),
+  n      = 5, 
+  colors = c('#00244c', '#40E0D0', '#006400', '#E69F00', '#696969'),
   fOp    = 0.5, 
   h      = 20, 
   w      = 20
@@ -249,7 +248,6 @@ m <- m |>
   leaflegend::addLegendImage(
     images      = wqLeg,
     labels      = c('Marine-Active', 
-                    'Marine-Inactive', 
                     'Lake', 'Stream-Active', 
                     'Stream-Inactive', 'Not Sampled'),
     labelStyle  = "font-size: 14px;",
@@ -285,10 +283,11 @@ getData <- reactive({
   data <- data.frame(
     dplyr::filter(wqM, WBID == wbid) |>
     dplyr::select(
-      Date, Type, DO, chl_a, TN, TP, TSS, Turbidity, Secchi, Temp, Salinity, Ecoli, Entero
-      )
+      Date, Type, DO, chl_a, TN, TP, TSS, Turbidity, Secchi, Temp, Salinity, 
+      Ecoli, Entero
+      ) |>
+      dplyr::mutate(Year = lubridate::year(Date))
     )
-
     return(data)
   })
 
@@ -336,7 +335,7 @@ site <- reactive({
 # Dissolved oxygen plot:
 DOplo <- reactive({
   return(plt(
-    data = dplyr::select(getData(), Date, DO) |> tidyr::drop_na(), 
+    data = dplyr::select(getData(), Date, DO, Year), 
     var = 'Dissolved Oxygen \n(% sat)',
     crit = wCrit$DO_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]
     ))
@@ -345,7 +344,7 @@ DOplo <- reactive({
 # Chlorophyll-a plot:
 chlplo <- reactive({
   return(plt(
-    data = dplyr::select(getData(), Date, chl_a) |> tidyr::drop_na(), 
+    data = dplyr::select(getData(), Date, chl_a, Year), 
     var  = 'Chlorophyll-a \n(µg/L)',
     crit = wCrit$chla_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]
     ))
@@ -354,7 +353,7 @@ chlplo <- reactive({
 # Total nitrogen plot:
 TNplo <- reactive({
   return(plt(
-    data =dplyr::select(getData(), Date, TN) |> tidyr::drop_na(), 
+    data =dplyr::select(getData(), Date, TN, Year), 
     var ='Total Nitrogen \n(mg/L)',
     crit = wCrit$TN_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]
     ))
@@ -363,7 +362,7 @@ TNplo <- reactive({
 # Total phosphorus plot:
 TPplo <- reactive({
   return(plt(
-    data = dplyr::select(getData(), Date, TP) |> tidyr::drop_na(), 
+    data = dplyr::select(getData(), Date, TP, Year), 
     var  = 'Total Phosphorus \n(mg/L)',
     crit = wCrit$TP_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]
     ))
@@ -372,7 +371,7 @@ TPplo <- reactive({
 # Total suspended solids plot:
 TSSplo <- reactive({
   return(plt(
-    data = dplyr::select(getData(), Date, TSS) |> tidyr::drop_na(), 
+    data = dplyr::select(getData(), Date, TSS, Year), 
     var  = 'Total Suspended Solids \n(mg/L)'
     ))
   })
@@ -380,7 +379,7 @@ TSSplo <- reactive({
 # Turbidity plot:
 NTUplo <- reactive({
   return(plt(
-    data = dplyr::select(getData(), Date, Turbidity) |> tidyr::drop_na(), 
+    data = dplyr::select(getData(), Date, Turbidity, Year), 
     var  = 'Turbidity \n(NTU)'
     ))
   })
@@ -388,7 +387,7 @@ NTUplo <- reactive({
 # Secchi depth plot:
 Secplo <- reactive({
   return(plt(
-    data = dplyr::select(getData(), Date, Secchi) |> tidyr::drop_na(), 
+    data = dplyr::select(getData(), Date, Secchi, Year), 
     var  = 'Secchi Depth \n(m)'
     ))
   })
@@ -396,7 +395,7 @@ Secplo <- reactive({
 # Total phosphorus plot:
 Tplo <- reactive({
   return(plt(
-    data = dplyr::select(getData(), Date, Temp) |> tidyr::drop_na(), 
+    data = dplyr::select(getData(), Date, Temp, Year), 
     var = 'Temperature \n(°C)'
     ))
   })
@@ -404,7 +403,7 @@ Tplo <- reactive({
 # Salinity plot:
 Splo <- reactive({
   return(plt(
-    data = dplyr::select(getData(), Date, Salinity) |> tidyr::drop_na(), 
+    data = dplyr::select(getData(), Date, Salinity, Year), 
     var  = 'Salinity \n(ppt)'
     ))
   })
@@ -412,7 +411,7 @@ Splo <- reactive({
 # E. coli plot:
 eplo <- reactive({
   return(plt(
-    data = dplyr::select(getData(), Date, Ecoli) |> tidyr::drop_na(), 
+    data = dplyr::select(getData(), Date, Ecoli, Year), 
     var  = HTML('<em>E. coli</em> \n(MPN/100mL)'),
     crit = wCrit$Ecoli_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]
     ))
@@ -421,7 +420,7 @@ eplo <- reactive({
 # Enterococcus plot:
 entplo <- reactive({
   return(plt(
-    data = dplyr::select(getData(), Date, Entero) |> tidyr::drop_na(), 
+    data = dplyr::select(getData(), Date, Entero, Year), 
     var  = HTML('<em>Enterococci</em> \n(MPN/100mL)'),
     crit = wCrit$Entero_crit[wCrit$WBID == wqShp$WBID[wqShp$ID == site()]]))
   })
@@ -632,9 +631,14 @@ nsModal <- modalDialog(
 
 # Display a special message for WBIDs in St. Petersburg:
 observeEvent(input$mapplo_shape_click, {
-  if (site() %in% c('SMACKS BAYOU', 'TAMPA BAY (UPPER SEGMENT)', 'TAMPA BAY (MIDDLE SEGMENT)', 'BEAR CREEK',
-                    'BOOKER CREEK', 'COFFEEPOT BAYOU', '34TH STREET BASIN',
-                    'FRENCHMANS CREEK - BASIN U', 'BAYOU CREEK')) {
+  if (site() %in% c(
+    'SMACKS BAYOU', 'TAMPA BAY (UPPER SEGMENT)', 'TAMPA BAY (MIDDLE SEGMENT)', 
+    'BEAR CREEK', 'LAKE MAGGIORE', 'BOOKER CREEK', 'COFFEEPOT BAYOU', 
+    '34TH STREET BASIN','FRENCHMANS CREEK - BASIN U', 'BAYOU CREEK','SALT CREEK',
+    'CLAM BAYOU (EAST DRAINAGE-SOUTH)','DIRECT RUNOFF TO BAY (YACHT BASIN - BASIN A)',
+    'CRESCENT LAKE','CLAM BAYOU DRAIN (TIDAL)','CLAM BAYOU (EAST DRAINAGE-NORTH)',
+    'CLAM BAYOU DRAIN', 'BEAR CREEK (TIDAL PORTION)', 'PASADENA LAKE OUTLET'
+    )) {
     showModal(nsModal)
   }
 })
